@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP Levels – Admin</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar"><div class="logo"><strong>Admin Panel</strong></div><a href="../dashboard.html">User Site</a></nav>
+  <div class="flex">
+    <aside class="sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="users.html">Users</a></li>
+        <li><a href="deposits.html">Deposits</a></li>
+        <li><a href="withdrawals.html">Withdrawals</a></li>
+        <li><a href="products.html">Products</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="kyc.html">KYC</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="logs.html">Logs</a></li>
+      </ul>
+    </aside>
+    <main style="flex:1; padding:2rem;">
+      <h2>VIP Levels Configuration</h2>
+      <table id="vip-table"><thead><tr><th>Level</th><th>Min Deposit</th><th>Min Investments</th><th>Min Referrals</th><th>Bonus%</th></tr></thead><tbody></tbody></table>
+      <button class="btn btn-primary mt-2" onclick="openAdd()">Add Level</button>
+      <div class="modal-overlay" id="vip-modal">
+        <div class="modal-content">
+          <h3>Add VIP Level</h3>
+          <div class="form-group"><input id="v-level" class="form-input" placeholder="Level name"></div>
+          <div class="form-group"><input id="v-dep" type="number" class="form-input" placeholder="Min Deposit (₦)"></div>
+          <div class="form-group"><input id="v-inv" type="number" class="form-input" placeholder="Min Investments"></div>
+          <div class="form-group"><input id="v-ref" type="number" class="form-input" placeholder="Min Referrals"></div>
+          <div class="form-group"><input id="v-bonus" type="number" class="form-input" placeholder="Daily Bonus %"></div>
+          <button class="btn btn-primary" onclick="addVIP()">Save</button>
+          <button class="btn btn-outline mt-1" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+    async function load() {
+      const { data } = await supabase.from('vip_levels').select('*').order('min_deposit', { ascending: true });
+      document.querySelector('#vip-table tbody').innerHTML = data.map(v => `
+        <tr><td>${v.level}</td><td>₦${v.min_deposit.toLocaleString()}</td><td>${v.min_investments}</td><td>${v.min_referrals}</td><td>${v.daily_bonus_percent}%</td></tr>
+      `).join('');
+    }
+    window.openAdd = () => { document.getElementById('vip-modal').classList.add('active'); };
+    window.closeModal = () => { document.getElementById('vip-modal').classList.remove('active'); };
+    window.addVIP = async () => {
+      await supabase.from('vip_levels').insert({
+        level: document.getElementById('v-level').value,
+        min_deposit: +document.getElementById('v-dep').value,
+        min_investments: +document.getElementById('v-inv').value,
+        min_referrals: +document.getElementById('v-ref').value,
+        daily_bonus_percent: +document.getElementById('v-bonus').value
+      });
+      closeModal();
+      load();
+    };
+    load();
+  </script>
+</body>
+</html>
