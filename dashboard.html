@@ -7,56 +7,85 @@
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div id="header-container"></div>>
-  <nav class="navbar">
-    <div class="logo"><strong>DTL Stocks</strong></div>
-    <ul class="nav-links">
-      <li><a href="dashboard.html" class="active">Dashboard</a></li>
-      <li><a href="deposit.html">Deposit</a></li>
-      <li><a href="withdraw.html">Withdraw</a></li>
-      <li><a href="investments.html">Investments</a></li>
-      <li><a href="referral.html">Referral</a></li>
-      <li><a href="support.html">Support</a></li>
-      <li><a href="#" id="logout-btn">Logout</a></li>
-    </ul>
-  </nav>
+  <div id="header-container"></div>
 
-  <div class="section">
-  <div class="card mb-2"><h4>KYC Status</h4><p id="kyc-status">Loading...</p><a href="/kyc.html" class="btn btn-sm btn-outline">Manage KYC</a></div>
-    <div class="widget-grid mb-3">
-      <div class="card stat-card">
-        <div class="stat-value" id="balance">₦0</div>
-        <div class="stat-label">Available Balance</div>
+  <div class="section dashboard-page">
+
+    <div class="dashboard-welcome">
+      <div>
+        <h2 id="welcome-name">Welcome back</h2>
+        <p class="text-muted" style="margin-bottom:0;">Here's what's happening with your account today.</p>
       </div>
-      <div class="card stat-card">
-        <div class="stat-value" id="total-deposited">₦0</div>
-        <div class="stat-label">Total Deposited</div>
+      <div id="kyc-banner-wrap"></div>
+    </div>
+
+    <div class="balance-card animate-fade">
+      <div class="balance-card-top">
+        <span class="balance-label">Available Balance</span>
+        <div class="balance-amount" id="balance">₦0</div>
       </div>
-      <div class="card stat-card">
-        <div class="stat-value" id="total-earned">₦0</div>
-        <div class="stat-label">Total Earned</div>
+      <div class="balance-sub-grid">
+        <div class="balance-sub">
+          <span class="balance-sub-label">Total Deposited</span>
+          <span class="balance-sub-value" id="total-deposited">₦0</span>
+        </div>
+        <div class="balance-sub">
+          <span class="balance-sub-label">Total Earned</span>
+          <span class="balance-sub-value" id="total-earned">₦0</span>
+        </div>
+        <div class="balance-sub">
+          <span class="balance-sub-label">Active Investments</span>
+          <span class="balance-sub-value" id="active-investments">0</span>
+        </div>
       </div>
-      <div class="card stat-card">
-        <div class="stat-value" id="active-investments">0</div>
-        <div class="stat-label">Active Investments</div>
+      <div class="quick-actions">
+        <a href="/deposit.html" class="quick-action-btn">
+          <span class="quick-action-icon">↓</span> Deposit
+        </a>
+        <a href="/withdraw.html" class="quick-action-btn">
+          <span class="quick-action-icon">↑</span> Withdraw
+        </a>
+        <a href="/investments.html" class="quick-action-btn">
+          <span class="quick-action-icon">＋</span> Invest
+        </a>
+        <a href="/referral.html" class="quick-action-btn">
+          <span class="quick-action-icon">⇄</span> Refer
+        </a>
       </div>
     </div>
 
-    <div class="flex gap-2 mb-2">
-      <div class="card" style="flex:1;">
-        <h3>Recent Transactions</h3>
-        <div id="transactions-list">Loading...</div>
+    <div class="dashboard-grid mt-3">
+      <div class="card">
+        <div class="card-header flex items-center" style="justify-content:space-between;">
+          <h3>Recent Transactions</h3>
+          <a href="/transaction-history.html" class="text-muted" style="font-size:0.85rem; text-decoration:none;">View all</a>
+        </div>
+        <div id="transactions-list">Loading…</div>
       </div>
-      <div class="card" style="flex:1;">
-        <h3>Active Investments</h3>
-        <div id="investments-list">Loading...</div>
+      <div class="card">
+        <div class="card-header flex items-center" style="justify-content:space-between;">
+          <h3>Active Investments</h3>
+          <a href="/investments.html" class="text-muted" style="font-size:0.85rem; text-decoration:none;">View all</a>
+        </div>
+        <div id="investments-list">Loading…</div>
       </div>
     </div>
   </div>
 
+  <div id="footer-container"></div>
+  <script src="/assets/js/components.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-    const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
+    const supabase = createClient(
+      'https://jytmnukzvxirnafukbck.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
+    );
+
+    // Critical: the shared header (assets/js/components.js) reads
+    // window.supabase to figure out whether you're logged in. Without this
+    // line, the header always falls back to the guest menu — regardless
+    // of whether this page's own auth check succeeds.
+    window.supabase = supabase;
 
     async function checkAuth() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -64,45 +93,79 @@
       return user;
     }
 
+    function renderKycBanner(status) {
+      const wrap = document.getElementById('kyc-banner-wrap');
+      if (status === 'approved') {
+        wrap.innerHTML = '<span class="badge badge-success">Verified</span>';
+      } else if (status === 'pending') {
+        wrap.innerHTML = `
+          <div class="alert alert-info kyc-banner">
+            <span>Your documents are under review.</span>
+          </div>`;
+      } else if (status === 'rejected') {
+        wrap.innerHTML = `
+          <div class="alert alert-danger kyc-banner">
+            <span>Your last KYC submission was rejected.</span>
+            <a href="/kyc.html" class="btn btn-sm btn-outline">Resubmit</a>
+          </div>`;
+      } else {
+        wrap.innerHTML = `
+          <div class="alert alert-danger kyc-banner">
+            <span>Not verified — withdrawals are locked.</span>
+            <a href="/kyc.html" class="btn btn-sm btn-primary">Verify Now</a>
+          </div>`;
+      }
+    }
+
     async function loadDashboard(user) {
-      // Wallet
       const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
-  const { data: profileKyc } = await supabase.from("profiles").select("kyc_status, full_name").eq("id", user.id).single();
-  const statusDiv = document.getElementById("kyc-status");
-  if (profileKyc?.kyc_status === "approved") {
-    statusDiv.innerHTML = "<span class=\"badge badge-success\">Verified</span>";
-  } else if (profileKyc?.kyc_status === "pending") {
-    statusDiv.innerHTML = "<span class=\"badge badge-warning\">Pending Review</span>";
-  } else {
-    statusDiv.innerHTML = "<span class=\"badge badge-danger\">Not Verified – Withdrawals locked</span>";
-  }
+      const { data: profileKyc } = await supabase.from('profiles').select('kyc_status, full_name').eq('id', user.id).single();
+
+      document.getElementById('welcome-name').textContent = profileKyc?.full_name
+        ? `Welcome back, ${profileKyc.full_name.split(' ')[0]}`
+        : 'Welcome back';
+      renderKycBanner(profileKyc?.kyc_status);
+
       document.getElementById('balance').textContent = '₦' + (wallet?.balance || 0).toLocaleString();
       document.getElementById('total-deposited').textContent = '₦' + (wallet?.total_deposited || 0).toLocaleString();
       document.getElementById('total-earned').textContent = '₦' + (wallet?.total_earned || 0).toLocaleString();
 
-      // Active investments count
-      const { data: investments } = await supabase.from('investments').select('id', { count: 'exact' }).eq('user_id', user.id).eq('status', 'active');
+      const { data: investments } = await supabase
+        .from('investments')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id)
+        .eq('status', 'active');
       document.getElementById('active-investments').textContent = investments?.length || 0;
 
-      // Recent transactions
-      const { data: txns } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
-      const txnHtml = txns?.map(t => `<p><span class="badge">${t.type}</span> ₦${t.amount.toLocaleString()} - ${new Date(t.created_at).toLocaleDateString()}</p>`).join('') || 'No transactions';
+      const { data: txns } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      const txnHtml = txns?.map(t => `
+        <div class="txn-row">
+          <span class="badge">${t.type}</span>
+          <span class="currency-ngn">${t.amount.toLocaleString()}</span>
+          <span class="text-muted" style="font-size:0.8rem;">${new Date(t.created_at).toLocaleDateString()}</span>
+        </div>`).join('') || '<p class="text-muted">No transactions yet.</p>';
       document.getElementById('transactions-list').innerHTML = txnHtml;
 
-      // Active investments
-      const { data: active } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).eq('status', 'active');
-      const invHtml = active?.map(i => `<p>${i.products?.name}: ₦${i.amount.toLocaleString()} (Day ${i.days_elapsed}/${i.duration_days}) – ROI +₦${i.total_income.toLocaleString()}</p>`).join('') || 'No active investments';
+      const { data: active } = await supabase
+        .from('investments')
+        .select('*, products(name)')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+      const invHtml = active?.map(i => `
+        <div class="txn-row">
+          <span>${i.products?.name || 'Investment'}</span>
+          <span class="currency-ngn">${i.amount.toLocaleString()}</span>
+          <span class="text-muted" style="font-size:0.8rem;">Day ${i.days_elapsed}/${i.duration_days} · +₦${i.total_income.toLocaleString()}</span>
+        </div>`).join('') || '<p class="text-muted">No active investments.</p>';
       document.getElementById('investments-list').innerHTML = invHtml;
     }
 
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      window.location.href = 'login.html';
-    });
-
     checkAuth().then(user => loadDashboard(user));
   </script>
-  <div id="footer-container"></div>
-  <script src="/assets/js/components.js"></script>
 </body>
-  </html>
+</html>
