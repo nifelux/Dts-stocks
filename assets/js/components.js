@@ -154,11 +154,36 @@ function renderMobileNav(groups, { user, displayName, adminLink } = {}) {
   `;
 }
 
+// Each page's own <script type="module"> creates its Supabase client and
+// sets window.supabase — that's a CDN import, so it can resolve AFTER
+// DOMContentLoaded fires. Poll briefly instead of checking once and
+// silently giving up (which is what left the mobile menu blank).
+function waitForSupabase(timeoutMs = 4000, intervalMs = 50) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    (function poll() {
+      if (window.supabase) return resolve(window.supabase);
+      if (Date.now() - start > timeoutMs) return resolve(null);
+      setTimeout(poll, intervalMs);
+    })();
+  });
+}
+
 async function updateAuthUI() {
-  const supabase = window.supabase;
   const nav = document.getElementById('main-nav');
   const mobileContent = document.getElementById('mobile-menu-content');
-  if (!supabase || !nav) return;
+  if (!nav) return;
+
+  const supabase = await waitForSupabase();
+  if (!supabase) {
+    // Couldn't detect a session in time — show the guest nav rather
+    // than leaving the menu empty.
+    nav.innerHTML = renderDesktopNav(NAV_GUEST);
+    if (mobileContent) mobileContent.innerHTML = renderMobileNav(NAV_GUEST);
+    initDropdowns();
+    initAccordions();
+    return;
+  }
 
   const { data: { user } } = await supabase.auth.getUser();
 
