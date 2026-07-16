@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support – DTL Stocks</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><strong>DTL Stocks</strong></div>
+    <ul class="nav-links"><li><a href="dashboard.html">Dashboard</a></li><li><a href="support.html" class="active">Support</a></li></ul>
+  </nav>
+
+  <div class="section" style="max-width:600px; margin:auto;">
+    <h2>New Ticket</h2>
+    <form id="ticket-form">
+      <div class="form-group"><input id="subject" class="form-input" placeholder="Subject" required></div>
+      <div class="form-group"><textarea id="message" class="form-textarea" placeholder="Describe your issue..." required></textarea></div>
+      <button class="btn btn-primary btn-block">Submit</button>
+    </form>
+    <h3 class="mt-3">My Tickets</h3>
+    <div id="tickets-list"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+
+    document.getElementById('ticket-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = (await supabase.auth.getUser()).data.user;
+      await supabase.from('support_tickets').insert({ user_id: user.id, subject: document.getElementById('subject').value, message: document.getElementById('message').value });
+      alert('Ticket created');
+      location.reload();
+    });
+
+    async function loadTickets() {
+      const user = (await supabase.auth.getUser()).data.user;
+      const { data } = await supabase.from('support_tickets').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      document.getElementById('tickets-list').innerHTML = data?.map(t => `<div class="card mb-1"><strong>${t.subject}</strong> – <span class="badge">${t.status}</span></div>`).join('') || 'No tickets';
+    }
+    loadTickets();
+  </script>
+</body>
+</html>
