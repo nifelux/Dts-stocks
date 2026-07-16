@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products – Admin</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar"><div class="logo"><strong>Admin Panel</strong></div><a href="../dashboard.html">User Site</a></nav>
+  <div class="flex">
+    <aside class="sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="users.html">Users</a></li>
+        <li><a href="deposits.html">Deposits</a></li>
+        <li><a href="withdrawals.html">Withdrawals</a></li>
+        <li><a href="products.html" class="active">Products</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="kyc.html">KYC</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="logs.html">Logs</a></li>
+      </ul>
+    </aside>
+    <main style="flex:1; padding:2rem;">
+      <h2>Investment Products</h2>
+      <button class="btn btn-primary mb-2" onclick="openCreate()">Create Product</button>
+      <table id="products-table"><thead><tr><th>Name</th><th>Daily ROI%</th><th>Duration</th><th>Min Invest</th><th>Locked</th><th>Actions</th></tr></thead><tbody></tbody></table>
+      <div class="modal-overlay" id="product-modal">
+        <div class="modal-content"><h3 id="modal-title">Create Product</h3><div id="modal-body"></div><button class="btn btn-primary mt-2" onclick="closeModal()">Close</button></div>
+      </div>
+    </main>
+  </div>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
+    async function load() {
+      const token = await getToken();
+      const res = await fetch('/api/investment?action=products', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      document.querySelector('#products-table tbody').innerHTML = data.map(p => `
+        <tr><td>${p.name}</td><td>${p.daily_roi_percent}%</td><td>${p.duration_days}d</td><td>₦${p.min_invest.toLocaleString()}</td><td>${p.is_locked?'Yes':'No'}</td>
+        <td class="flex gap-1">
+          <button class="btn btn-sm btn-outline" onclick="toggleLock('${p.id}', ${p.is_locked})">${p.is_locked?'Unlock':'Lock'}</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">Delete</button>
+        </td></tr>
+      `).join('');
+    }
+    window.openCreate = () => {
+      document.getElementById('modal-title').textContent = 'Create Product';
+      document.getElementById('modal-body').innerHTML = `
+        <div class="form-group"><input id="p-name" class="form-input" placeholder="Name"></div>
+        <div class="form-group"><input id="p-desc" class="form-input" placeholder="Description"></div>
+        <div class="form-group"><input id="p-roi" class="form-input" type="number" placeholder="Daily ROI %"></div>
+        <div class="form-group"><input id="p-dur" class="form-input" type="number" placeholder="Duration (days)"></div>
+        <div class="form-group"><input id="p-min" class="form-input" type="number" placeholder="Min Invest (₦)"></div>
+        <button class="btn btn-primary" onclick="createProduct()">Save</button>
+      `;
+      document.getElementById('product-modal').classList.add('active');
+    };
+    window.createProduct = async () => {
+      const token = await getToken();
+      await fetch('/api/investment?action=createProduct', { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body: JSON.stringify({
+        name: document.getElementById('p-name').value,
+        description: document.getElementById('p-desc').value,
+        daily_roi_percent: +document.getElementById('p-roi').value,
+        duration_days: +document.getElementById('p-dur').value,
+        min_invest: +document.getElementById('p-min').value
+      }) });
+      closeModal(); load();
+    };
+    window.toggleLock = async (id, locked) => {
+      const token = await getToken();
+      await fetch('/api/investment?action=toggleLock', { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body: JSON.stringify({ id, is_locked: !locked }) });
+      load();
+    };
+    window.deleteProduct = async (id) => {
+      if (!confirm('Delete?')) return;
+      const token = await getToken();
+      await fetch('/api/investment?action=deleteProduct', { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body: JSON.stringify({ id }) });
+      load();
+    };
+    window.closeModal = () => document.getElementById('product-modal').classList.remove('active');
+    load();
+  </script>
+</body>
+</html>
