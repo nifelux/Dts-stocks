@@ -2,7 +2,7 @@
  * Admin API – Comprehensive management actions
  * Actions: stats, users, freezeUser, banUser, unbanUser, creditWallet, debitWallet,
  *          lockWithdrawals, openWithdrawals, maintenanceMode, settingsGet, settingsUpdate,
- *          broadcast, getAuditLogs, getActivityLogs, exportCSV, etc.
+ *          broadcast, getAuditLogs, getActivityLogs, exportCSV, kycList, approveKYC, rejectKYC
  */
 import supabaseAdmin from '../lib/supabase.js';
 import { verifyAdmin } from '../lib/auth.js';
@@ -30,6 +30,9 @@ export default async function handler(req, res) {
       case 'auditLogs': return getAuditLogs(req, res);
       case 'activityLogs': return getActivityLogs(req, res);
       case 'exportCSV': return exportCSV(req, res);
+      case 'kycList': return kycList(req, res);
+      case 'approveKYC': return approveKYC(req, res);
+      case 'rejectKYC': return rejectKYC(req, res);
       default: return res.status(400).json({ error: 'Invalid action' });
     }
   } catch (err) {
@@ -194,151 +197,111 @@ async function exportCSV(req, res) {
 async function getSetting(key) {
   const { data } = await supabaseAdmin.from('settings').select('value').eq('key', key).single();
   return data?.value || {};
-    }
-// ============================================================
-// Backend logic for the KYC actions used by admin/kyc.html:
-//   GET/POST /api/admin?action=kycList
-//   POST     /api/admin?action=approveKYC   { id }
-//   POST     /api/admin?action=rejectKYC    { id, reason }
-//
-// Merge this into your existing /api/admin.js — it only covers the
-// three `action` branches relevant to KYC review. Everything here runs
-// with the SERVICE ROLE key, server-side only. Never send this key to
-// the browser.
-// ============================================================
-
-import { createClient } from '@supabase/supabase-js';
-
-// service_role bypasses RLS — this is what lets the admin panel read
-// every user's kyc_documents row and resolve every private storage path,
-// while regular users remain scoped to their own folder by the RLS
-// policies on storage.objects.
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-// Verifies the request's bearer token belongs to a signed-in user whose
-// profile has is_admin = true. Every action below must call this first.
-async function requireAdmin(req) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  if (!token) return null;
-
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) return null;
-
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-
-  return profile?.is_admin ? user : null;
 }
 
-export default async function handler(req, res) {
-  const admin = await requireAdmin(req);
-  if (!admin) return res.status(403).json({ error: 'Forbidden' });
+// ============================================================
+// KYC review actions (used by admin/kyc.html)
+// image_url on kyc_documents is a private storage PATH (e.g.
+// "<user_id>/selfie_169....jpg"), not a public URL — it must be resolved
+// to a short-lived signed URL here, server-side, using supabaseAdmin
+// (service_role), since the bucket has no public access.
+// ============================================================
 
-  const { action } = req.query;
+async function kycList(req, res) {
+  await verifyAdmin(req);
 
-  if (action === 'kycList') {
-    const { data: docs, error } = await supabaseAdmin
-      .from('kyc_documents')
-      .select('*, profiles(email)')
-      .order('submitted_at', { ascending: false });
+  const { data: docs, error } = await supabaseAdmin
+    .from('kyc_documents')
+    .select('*, profiles(email)')
+    .order('submitted_at', { ascending: false });
 
-    if (error) return res.status(500).json({ error: error.message });
+  if (error) return res.status(500).json({ error: error.message });
 
-    // Resolve each private storage path into a short-lived signed URL.
-    // image_url is a path like "<user_id>/selfie_169...jpg", not a public URL.
-    const withSignedUrls = await Promise.all(
-      docs.map(async (doc) => {
-        const { data: signed } = await supabaseAdmin.storage
-          .from('kyc')
-          .createSignedUrl(doc.image_url, 300); // 5 minutes
-        return { ...doc, signedUrl: signed?.signedUrl || null };
-      })
-    );
+  const withSignedUrls = await Promise.all(
+    docs.map(async (doc) => {
+      const { data: signed } = await supabaseAdmin.storage
+        .from('kyc')
+        .createSignedUrl(doc.image_url, 300); // 5 minutes
+      return { ...doc, signedUrl: signed?.signedUrl || null };
+    })
+  );
 
-    return res.status(200).json(withSignedUrls);
-  }
+  return res.status(200).json(withSignedUrls);
+}
 
-  if (action === 'approveKYC') {
-    const { id } = req.body;
-    if (!id) return res.status(400).json({ error: 'Missing id' });
+async function approveKYC(req, res) {
+  const admin = await verifyAdmin(req);
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
 
-    const { data: doc, error: fetchErr } = await supabaseAdmin
-      .from('kyc_documents')
-      .select('user_id')
-      .eq('id', id)
-      .single();
-    if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' });
+  const { data: doc, error: fetchErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .select('user_id')
+    .eq('id', id)
+    .single();
+  if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' });
 
-    const { error: docErr } = await supabaseAdmin
-      .from('kyc_documents')
-      .update({ status: 'approved', reviewed_at: new Date().toISOString() })
-      .eq('id', id);
-    if (docErr) return res.status(500).json({ error: docErr.message });
+  const { error: docErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+    .eq('id', id);
+  if (docErr) return res.status(500).json({ error: docErr.message });
 
-    // Only one doc type (selfie) is currently required, so approving it
-    // approves the user. If you add id_front/id_back/address_proof later,
-    // switch this to check that ALL of the user's required doc types are
-    // approved before flipping the profile status.
-    const { error: profileErr } = await supabaseAdmin
-      .from('profiles')
-      .update({ kyc_status: 'approved', updated_at: new Date().toISOString() })
-      .eq('id', doc.user_id);
-    if (profileErr) return res.status(500).json({ error: profileErr.message });
+  // Only one doc type (selfie) is currently required, so approving it
+  // approves the user. If you later require id_front/id_back/address_proof
+  // too, check that ALL of the user's required doc types are approved
+  // before flipping profiles.kyc_status.
+  const { error: profileErr } = await supabaseAdmin
+    .from('profiles')
+    .update({ kyc_status: 'approved', updated_at: new Date().toISOString() })
+    .eq('id', doc.user_id);
+  if (profileErr) return res.status(500).json({ error: profileErr.message });
 
-    await supabaseAdmin.from('audit_logs').insert({
-      admin_id: admin.id,
-      action: 'kyc_approved',
-      table_name: 'kyc_documents',
-      record_id: id
-    });
+  await supabaseAdmin.from('audit_logs').insert({
+    admin_id: admin?.id ?? null,
+    action: 'kyc_approved',
+    table_name: 'kyc_documents',
+    record_id: id
+  });
 
-    return res.status(200).json({ success: true });
-  }
+  return res.status(200).json({ message: 'KYC approved' });
+}
 
-  if (action === 'rejectKYC') {
-    const { id, reason } = req.body;
-    if (!id) return res.status(400).json({ error: 'Missing id' });
+async function rejectKYC(req, res) {
+  const admin = await verifyAdmin(req);
+  const { id, reason } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
 
-    const { data: doc, error: fetchErr } = await supabaseAdmin
-      .from('kyc_documents')
-      .select('user_id')
-      .eq('id', id)
-      .single();
-    if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' });
+  const { data: doc, error: fetchErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .select('user_id')
+    .eq('id', id)
+    .single();
+  if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' });
 
-    const { error: docErr } = await supabaseAdmin
-      .from('kyc_documents')
-      .update({
-        status: 'rejected',
-        admin_notes: reason || null,
-        reviewed_at: new Date().toISOString()
-      })
-      .eq('id', id);
-    if (docErr) return res.status(500).json({ error: docErr.message });
+  const { error: docErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .update({
+      status: 'rejected',
+      admin_notes: reason || null,
+      reviewed_at: new Date().toISOString()
+    })
+    .eq('id', id);
+  if (docErr) return res.status(500).json({ error: docErr.message });
 
-    const { error: profileErr } = await supabaseAdmin
-      .from('profiles')
-      .update({ kyc_status: 'rejected', updated_at: new Date().toISOString() })
-      .eq('id', doc.user_id);
-    if (profileErr) return res.status(500).json({ error: profileErr.message });
+  const { error: profileErr } = await supabaseAdmin
+    .from('profiles')
+    .update({ kyc_status: 'rejected', updated_at: new Date().toISOString() })
+    .eq('id', doc.user_id);
+  if (profileErr) return res.status(500).json({ error: profileErr.message });
 
-    await supabaseAdmin.from('audit_logs').insert({
-      admin_id: admin.id,
-      action: 'kyc_rejected',
-      table_name: 'kyc_documents',
-      record_id: id,
-      new_values: { reason: reason || null }
-    });
+  await supabaseAdmin.from('audit_logs').insert({
+    admin_id: admin?.id ?? null,
+    action: 'kyc_rejected',
+    table_name: 'kyc_documents',
+    record_id: id,
+    new_values: { reason: reason || null }
+  });
 
-    return res.status(200).json({ success: true });
-  }
-
-  return res.status(404).json({ error: 'Unknown action' });
+  return res.status(200).json({ message: 'KYC rejected' });
 }
