@@ -3,6 +3,6 @@
 <div class="section" id="detail"></div>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
 (async()=>{const id=new URLSearchParams(location.search).get('id');const {data}=await supabase.from('investments').select('*, products(*)').eq('id',id).single();document.getElementById('detail').innerHTML=`<div class="card"><h2>${data.products.name}</h2><p>Invested: ₦${data.amount.toLocaleString()}</p><p>Daily ROI: ₦${data.daily_income.toLocaleString()}</p><p>Earned: ₦${data.total_income.toLocaleString()}</p><p>Status: ${data.status}</p></div>`;})();
 </script></body></html>
