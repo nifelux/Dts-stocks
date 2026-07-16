@@ -1,24 +1,23 @@
 <header class="floating-header">
   <div class="header-container">
     <a href="/" class="brand">
-      <span>DTL Stocks</span>
+      <span class="brand-mark">DTL</span>
+      <span class="brand-name">Stocks</span>
     </a>
-    <nav id="main-nav" class="nav-links">
-      <a href="/">Home</a>
-      <a href="/dashboard.html">Dashboard</a>
-      <a href="/investments.html">Investments</a>
-      <a href="/referral.html">Referral</a>
-      <a href="/support.html">Support</a>
-      <a href="/login.html" class="btn btn-sm btn-primary">Login</a>
-    </nav>
-    <button class="mobile-toggle" onclick="toggleMobileMenu()">☰</button>
+
+    <nav id="main-nav" class="nav-links"></nav>
+
+    <button class="mobile-toggle" id="mobile-toggle-btn" aria-label="Open menu" aria-expanded="false">
+      <span class="hamburger"><span></span><span></span><span></span></span>
+    </button>
   </div>
 </header>
-<nav id="mobile-menu" class="mobile-menu">
-  <a href="/">Home</a>
-  <a href="/dashboard.html">Dashboard</a>
-  <a href="/investments.html">Investments</a>
-  <a href="/referral.html">Referral</a>
-  <a href="/support.html">Support</a>
-  <a href="/login.html">Login</a>
+
+<div id="mobile-overlay" class="mobile-overlay"></div>
+<nav id="mobile-menu" class="mobile-menu" aria-hidden="true">
+  <div class="mobile-menu-header">
+    <span class="brand-name">Menu</span>
+    <button id="mobile-close-btn" class="mobile-close" aria-label="Close menu">&times;</button>
+  </div>
+  <div id="mobile-menu-content" class="mobile-menu-content"></div>
 </nav>
