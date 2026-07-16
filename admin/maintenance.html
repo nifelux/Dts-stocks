@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maintenance – Admin</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar"><div class="logo"><strong>Admin Panel</strong></div><a href="../dashboard.html">User Site</a></nav>
+  <div class="flex">
+    <aside class="sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="users.html">Users</a></li>
+        <li><a href="deposits.html">Deposits</a></li>
+        <li><a href="withdrawals.html">Withdrawals</a></li>
+        <li><a href="products.html">Products</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="kyc.html">KYC</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="logs.html">Logs</a></li>
+      </ul>
+    </aside>
+    <main style="flex:1; padding:2rem;">
+      <h2>Maintenance Mode</h2>
+      <p>Toggle maintenance mode. When enabled, only admins can access the site.</p>
+      <button id="toggle-btn" class="btn btn-danger" onclick="toggle()">Loading...</button>
+    </main>
+  </div>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
+    async function check() {
+      const token = await getToken();
+      const res = await fetch('/api/admin?action=settingsGet', { headers: { Authorization: `Bearer ${token}` } });
+      const s = await res.json();
+      const mm = s.find(s => s.key === 'maintenance_mode')?.value === 'true';
+      const btn = document.getElementById('toggle-btn');
+      btn.textContent = mm ? 'Disable Maintenance' : 'Enable Maintenance';
+      btn.className = mm ? 'btn btn-success' : 'btn btn-danger';
+    }
+    window.toggle = async () => {
+      const token = await getToken();
+      const btn = document.getElementById('toggle-btn');
+      const enable = btn.textContent.includes('Enable');
+      await fetch('/api/admin?action=maintenanceMode', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ enabled: enable }) });
+      check();
+    };
+    check();
+  </script>
+</body>
+</html>
