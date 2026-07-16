@@ -1,7 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/login", "destination": "/login.html" },
-    { "source": "/register", "destination": "/register.html" }
-  ]
+  "functions": {
+    "api/*.js": {
+      "memory": 512,
+      "maxDuration": 10
+    }
+  },
+  "static": true
 }
