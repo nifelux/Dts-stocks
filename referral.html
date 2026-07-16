@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Referral – DTL Stocks</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><strong>DTL Stocks</strong></div>
+    <ul class="nav-links">
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="referral.html" class="active">Referral</a></li>
+    </ul>
+  </nav>
+
+  <div class="section" style="max-width:600px; margin:auto;">
+    <h2>Referral Program</h2>
+    <div class="card mb-2">
+      <p>Your Referral Link:</p>
+      <input type="text" id="ref-link" class="form-input" readonly>
+      <button class="btn btn-primary btn-sm mt-1" onclick="copyLink()">Copy</button>
+    </div>
+    <div class="card mb-2">
+      <h3>Your Referrals</h3>
+      <div id="direct-referrals"></div>
+    </div>
+    <div class="card">
+      <h3>Referral Rewards</h3>
+      <div id="referral-rewards"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+
+    async function loadReferral() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from('profiles').select('referral_code').eq('id', user.id).single();
+      const link = `${window.location.origin}/register.html?ref=${profile.referral_code}`;
+      document.getElementById('ref-link').value = link;
+
+      // Direct referrals
+      const { data: direct } = await supabase.from('profiles').select('full_name, email, created_at').eq('referred_by', user.id);
+      document.getElementById('direct-referrals').innerHTML = direct?.map(d => `<p>${d.full_name || d.email} (joined ${new Date(d.created_at).toLocaleDateString()})</p>`).join('') || 'None';
+
+      // Rewards
+      const { data: rewards } = await supabase.from('referral_rewards').select('*').eq('referrer_id', user.id);
+      document.getElementById('referral-rewards').innerHTML = rewards?.map(r => `<p>₦${r.reward_amount.toLocaleString()} – Level ${r.level} (${r.transaction_type})</p>`).join('') || 'No rewards yet';
+    }
+    loadReferral();
+    window.copyLink = () => {
+      const inp = document.getElementById('ref-link');
+      inp.select();
+      document.execCommand('copy');
+      alert('Link copied!');
+    };
+  </script>
+</body>
+</html>
