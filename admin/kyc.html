@@ -25,39 +25,108 @@
     </aside>
     <main style="flex:1; padding:2rem;">
       <h2>KYC Documents</h2>
-      <div id="docs"></div>
+      <div id="docs">Loading…</div>
     </main>
   </div>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-    const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
-    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
+    const supabase = createClient(
+      'https://jytmnukzvxirnafukbck.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
+    );
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str ?? '';
+      return div.innerHTML;
+    }
+
+    async function getToken() {
+      return (await supabase.auth.getSession()).data.session?.access_token;
+    }
+
     async function load() {
+      const docsEl = document.getElementById('docs');
       const token = await getToken();
-      const res = await fetch('/api/admin?action=kycList', { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      document.getElementById('docs').innerHTML = data.map(d => `
+      if (!token) {
+        docsEl.innerHTML = 'You must be signed in as an admin.';
+        return;
+      }
+
+      let data;
+      try {
+        const res = await fetch('/api/admin?action=kycList', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          docsEl.innerHTML = res.status === 403
+            ? 'You do not have permission to view this page.'
+            : 'Failed to load KYC documents.';
+          return;
+        }
+        data = await res.json();
+      } catch {
+        docsEl.innerHTML = 'Failed to load KYC documents.';
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        docsEl.innerHTML = 'No KYC documents to review.';
+        return;
+      }
+
+      // The backend resolves each private storage path into a short-lived
+      // signed URL (signedUrl) using the service_role key — the browser
+      // never talks to Storage directly for these private files.
+      docsEl.innerHTML = data.map(d => `
         <div class="card mb-2">
-          <p><strong>User:</strong> ${d.profiles?.email || d.user_id.slice(0,8)} | <strong>Type:</strong> ${d.doc_type} | <strong>Status:</strong> ${d.status}</p>
-          <img src="${d.image_url}" style="max-width:200px; border-radius:8px;">
+          <p>
+            <strong>User:</strong> ${escapeHtml(d.profiles?.email || d.user_id.slice(0, 8))} |
+            <strong>Type:</strong> ${escapeHtml(d.doc_type)} |
+            <strong>Status:</strong> ${escapeHtml(d.status)}
+          </p>
+          ${d.signedUrl
+            ? `<img src="${d.signedUrl}" style="max-width:200px; border-radius:8px;" alt="${escapeHtml(d.doc_type)}">`
+            : '<p class="text-muted">Preview unavailable</p>'}
           ${d.status === 'pending' ? `
             <div class="flex gap-1 mt-1">
-              <button class="btn btn-sm btn-success" onclick="approve('${d.id}')">Approve</button>
-              <button class="btn btn-sm btn-danger" onclick="reject('${d.id}')">Reject</button>
+              <button class="btn btn-sm btn-success" data-approve="${d.id}">Approve</button>
+              <button class="btn btn-sm btn-danger" data-reject="${d.id}">Reject</button>
             </div>` : ''}
         </div>
       `).join('');
     }
-    window.approve = async (id) => {
+
+    async function approve(id) {
       const token = await getToken();
-      await fetch('/api/admin?action=approveKYC', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body: JSON.stringify({ id }) });
+      await fetch('/api/admin?action=approveKYC', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id })
+      });
       load();
-    };
-    window.reject = async (id) => {
+    }
+
+    async function reject(id) {
+      const reason = prompt('Reason for rejection (shown to the user):') || '';
       const token = await getToken();
-      await fetch('/api/admin?action=rejectKYC', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body: JSON.stringify({ id }) });
+      await fetch('/api/admin?action=rejectKYC', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, reason })
+      });
       load();
-    };
+    }
+
+    // Event delegation instead of inline onclick= (avoids relying on
+    // globals and keeps behavior working even with escaped/dynamic content)
+    document.getElementById('docs').addEventListener('click', (e) => {
+      const approveId = e.target.dataset.approve;
+      const rejectId = e.target.dataset.reject;
+      if (approveId) approve(approveId);
+      if (rejectId) reject(rejectId);
+    });
+
     load();
   </script>
 </body>
