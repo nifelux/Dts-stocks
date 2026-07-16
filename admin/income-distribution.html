@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Income Distribution – Admin</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar"><div class="logo"><strong>Admin Panel</strong></div><a href="../dashboard.html">User Site</a></nav>
+  <div class="flex">
+    <aside class="sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="users.html">Users</a></li>
+        <li><a href="deposits.html">Deposits</a></li>
+        <li><a href="withdrawals.html">Withdrawals</a></li>
+        <li><a href="products.html">Products</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="kyc.html">KYC</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="logs.html">Logs</a></li>
+      </ul>
+    </aside>
+    <main style="flex:1; padding:2rem;">
+      <h2>Income Distribution</h2>
+      <p>Daily income for active investments runs automatically at midnight. You may trigger it manually below.</p>
+      <button class="btn btn-primary" onclick="runNow()">Run Daily Income Now</button>
+      <div id="result" class="mt-2"></div>
+    </main>
+  </div>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
+    window.runNow = async () => {
+      const token = await getToken();
+      const res = await fetch('/api/cron?action=triggerDailyIncome', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        document.getElementById('result').innerHTML = '<div class="alert alert-success">Income distribution completed successfully.</div>';
+      } else {
+        document.getElementById('result').innerHTML = '<div class="alert alert-danger">Failed to run distribution.</div>';
+      }
+    };
+  </script>
+</body>
+</html>
