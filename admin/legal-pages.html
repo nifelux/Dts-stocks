@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legal Pages – Admin</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar"><div class="logo"><strong>Admin Panel</strong></div><a href="../dashboard.html">User Site</a></nav>
+  <div class="flex">
+    <aside class="sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="users.html">Users</a></li>
+        <li><a href="deposits.html">Deposits</a></li>
+        <li><a href="withdrawals.html">Withdrawals</a></li>
+        <li><a href="products.html">Products</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="kyc.html">KYC</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="logs.html">Logs</a></li>
+      </ul>
+    </aside>
+    <main style="flex:1; padding:2rem;">
+      <h2>Legal Pages</h2>
+      <div class="card mb-2">
+        <h4>Terms of Service</h4>
+        <textarea id="terms" class="form-textarea" rows="10"></textarea>
+      </div>
+      <div class="card">
+        <h4>Privacy Policy</h4>
+        <textarea id="privacy" class="form-textarea" rows="10"></textarea>
+      </div>
+      <button class="btn btn-primary mt-2" onclick="save()">Save Legal Pages</button>
+    </main>
+  </div>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
+    (async () => {
+      const token = await getToken();
+      const res = await fetch('/api/admin?action=settingsGet', { headers: { Authorization: `Bearer ${token}` } });
+      const s = await res.json();
+      const legal = s.find(s => s.key === 'legal')?.value || {};
+      document.getElementById('terms').value = legal.terms || '';
+      document.getElementById('privacy').value = legal.privacy || '';
+    })();
+    window.save = async () => {
+      const token = await getToken();
+      const obj = { terms: document.getElementById('terms').value, privacy: document.getElementById('privacy').value };
+      await fetch('/api/admin?action=settingsUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ key: 'legal', value: obj }) });
+      alert('Legal pages saved');
+    };
+  </script>
+</body>
+</html>
