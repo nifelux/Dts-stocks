@@ -4,6 +4,5 @@
       "memory": 512,
       "maxDuration": 10
     }
-  },
-  "static": true
+  }
 }
