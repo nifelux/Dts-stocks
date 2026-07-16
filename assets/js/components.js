@@ -176,18 +176,29 @@ async function updateAuthUI() {
 
   const supabase = await waitForSupabase();
   if (!supabase) {
-    // Couldn't detect a session in time — show the guest nav rather
-    // than leaving the menu empty.
-    nav.innerHTML = renderDesktopNav(NAV_GUEST);
-    if (mobileContent) mobileContent.innerHTML = renderMobileNav(NAV_GUEST);
-    initDropdowns();
-    initAccordions();
+    renderNavFor(null);
     return;
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Don't call supabase.auth.getUser() right away — immediately after the
+  // client is created it may not have finished restoring the session from
+  // storage yet, which was causing logged-in users to briefly (or
+  // permanently, depending on page speed) see the guest menu.
+  // onAuthStateChange fires once with event === 'INITIAL_SESSION' as soon
+  // as the client has resolved the real session, and again on any future
+  // sign-in/sign-out — so the nav also updates live without a reload.
+  supabase.auth.onAuthStateChange((_event, session) => {
+    renderNavFor(session?.user || null);
+  });
+}
 
-  if (user) {
+async function renderNavFor(user) {
+  const supabase = window.supabase;
+  const nav = document.getElementById('main-nav');
+  const mobileContent = document.getElementById('mobile-menu-content');
+  if (!nav) return;
+
+  if (user && supabase) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, is_admin')
