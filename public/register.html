@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – DTL Stocks</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .auth-container { max-width: 450px; margin: 3rem auto; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="auth-container card">
+    <h2 class="text-center">Create Account</h2>
+    <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
+    <div id="success-alert" class="alert alert-success" style="display:none;"></div>
+    <form id="register-form">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="full_name" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="email" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="password" class="form-input" required minlength="6">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Referral Code (optional)</label>
+        <input type="text" id="referral_code" class="form-input">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Register</button>
+    </form>
+    <p class="text-center mt-2">Already have an account? <a href="login.html">Login</a></p>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const full_name = document.getElementById('full_name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const referralCode = document.getElementById('referral_code').value;
+      const errorDiv = document.getElementById('error-alert');
+      const successDiv = document.getElementById('success-alert');
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+
+      // Check referral code if provided
+      let referred_by = null;
+      if (referralCode) {
+        const { data: ref } = await supabase.from('profiles').select('id').eq('referral_code', referralCode).single();
+        if (!ref) {
+          errorDiv.textContent = 'Invalid referral code';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        referred_by = ref.id;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name } }
+      });
+
+      if (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      // Update profile with referral info
+      if (referred_by) {
+        await supabase.from('profiles').update({ referred_by }).eq('id', data.user.id);
+      }
+
+      successDiv.textContent = 'Registration successful! Check your email to confirm your account (if enabled).';
+      successDiv.style.display = 'block';
+      setTimeout(() => { window.location.href = 'login.html'; }, 3000);
+    });
+  </script>
+</body>
+</html>
