@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard – DTL Stocks</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><strong>DTL Stocks</strong></div>
+    <ul class="nav-links">
+      <li><a href="dashboard.html" class="active">Dashboard</a></li>
+      <li><a href="deposit.html">Deposit</a></li>
+      <li><a href="withdraw.html">Withdraw</a></li>
+      <li><a href="investments.html">Investments</a></li>
+      <li><a href="referral.html">Referral</a></li>
+      <li><a href="support.html">Support</a></li>
+      <li><a href="#" id="logout-btn">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="section">
+    <div class="widget-grid mb-3">
+      <div class="card stat-card">
+        <div class="stat-value" id="balance">₦0</div>
+        <div class="stat-label">Available Balance</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="total-deposited">₦0</div>
+        <div class="stat-label">Total Deposited</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="total-earned">₦0</div>
+        <div class="stat-label">Total Earned</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="active-investments">0</div>
+        <div class="stat-label">Active Investments</div>
+      </div>
+    </div>
+
+    <div class="flex gap-2 mb-2">
+      <div class="card" style="flex:1;">
+        <h3>Recent Transactions</h3>
+        <div id="transactions-list">Loading...</div>
+      </div>
+      <div class="card" style="flex:1;">
+        <h3>Active Investments</h3>
+        <div id="investments-list">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://your-project.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) window.location.href = 'login.html';
+      return user;
+    }
+
+    async function loadDashboard(user) {
+      // Wallet
+      const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
+      document.getElementById('balance').textContent = '₦' + (wallet?.balance || 0).toLocaleString();
+      document.getElementById('total-deposited').textContent = '₦' + (wallet?.total_deposited || 0).toLocaleString();
+      document.getElementById('total-earned').textContent = '₦' + (wallet?.total_earned || 0).toLocaleString();
+
+      // Active investments count
+      const { data: investments } = await supabase.from('investments').select('id', { count: 'exact' }).eq('user_id', user.id).eq('status', 'active');
+      document.getElementById('active-investments').textContent = investments?.length || 0;
+
+      // Recent transactions
+      const { data: txns } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
+      const txnHtml = txns?.map(t => `<p><span class="badge">${t.type}</span> ₦${t.amount.toLocaleString()} - ${new Date(t.created_at).toLocaleDateString()}</p>`).join('') || 'No transactions';
+      document.getElementById('transactions-list').innerHTML = txnHtml;
+
+      // Active investments
+      const { data: active } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).eq('status', 'active');
+      const invHtml = active?.map(i => `<p>${i.products?.name}: ₦${i.amount.toLocaleString()} (Day ${i.days_elapsed}/${i.duration_days}) – ROI +₦${i.total_income.toLocaleString()}</p>`).join('') || 'No active investments';
+      document.getElementById('investments-list').innerHTML = invHtml;
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    checkAuth().then(user => loadDashboard(user));
+  </script>
+</body>
+  </html>
