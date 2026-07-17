@@ -1,80 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Investments – DTL Stocks</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investments – DTL Stocks</title>
+<link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div id="header-container"></div>>
-  <nav class="navbar">
-    <div class="logo"><strong>DTL Stocks</strong></div>
-    <ul class="nav-links"><li><a href="dashboard.html">Dashboard</a></li><li><a href="investments.html" class="active">Investments</a></li></ul>
-  </nav>
+<div id="header-container"></div>
 
-  <div class="section">
-    <h2>Investment Products</h2>
-    <div class="grid-3" id="products-list"></div>
-    <h2 class="mt-3">My Investments</h2>
-    <div id="my-investments"></div>
-  </div>
+<div class="section">
+<h2>Investment Products</h2>
+<div class="grid-3" id="products-list"></div>
+<h2 class="mt-3">My Investments</h2>
+<div id="my-investments"></div>
+</div>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-    const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
+<div id="footer-container"></div>
+<script src="/assets/js/components.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
 
-    async function loadProducts() {
-      const { data } = await supabase.from('products').select('*').eq('is_locked', false);
-      document.getElementById('products-list').innerHTML = data?.map(p => `
-        <div class="card">
-          <h3>${p.name}</h3><p>${p.description||''}</p>
-          <p>Daily ROI: ${p.daily_roi_percent}% | ${p.duration_days} days</p>
-          <p>Min: ₦${p.min_invest.toLocaleString()}</p>
-          <button class="btn btn-primary btn-sm invest-btn" data-id="${p.id}">Invest</button>
-        </div>
-      `).join('') || 'No products';
+// Required so the shared header (assets/js/components.js) can detect
+// the logged-in session — without this it always shows the guest menu.
+window.supabase = supabase;
 
-      document.querySelectorAll('.invest-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const productId = btn.dataset.id;
-          const amount = prompt('Enter amount to invest (₦):');
-          if (amount && +amount > 0) {
-            invest(productId, +amount);
-          }
-        });
-      });
-    }
+async function loadProducts() {
+  const { data } = await supabase.from('products').select('*').eq('is_locked', false);
+  document.getElementById('products-list').innerHTML = data?.map(p => `
+    <div class="card">
+      <h3>${p.name}</h3><p>${p.description||''}</p>
+      <p>Daily ROI: ${p.daily_roi_percent}% | ${p.duration_days} days</p>
+      <p>Min: ₦${p.min_invest.toLocaleString()}</p>
+      <button class="btn btn-primary btn-sm invest-btn" data-id="${p.id}">Invest</button>
+    </div>
+  `).join('') || 'No products';
 
-    async function invest(productId, amount) {
-      const user = (await supabase.auth.getUser()).data.user;
-      const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
-      if (amount < product.min_invest) return alert(`Minimum: ₦${product.min_invest}`);
-      const dailyIncome = (amount * product.daily_roi_percent) / 100;
-      const { error } = await supabase.from('investments').insert({
-        user_id: user.id, product_id: productId, amount, daily_income: dailyIncome, duration_days: product.duration_days
-      });
-      if (error) return alert(error.message);
-      alert('Investment created! It will be active upon deposit approval.');
-      location.reload();
-    }
+  document.querySelectorAll('.invest-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const productId = btn.dataset.id;
+      const amount = prompt('Enter amount to invest (₦):');
+      if (amount && +amount > 0) {
+        invest(productId, +amount);
+      }
+    });
+  });
+}
 
-    async function loadMyInvestments() {
-      const user = (await supabase.auth.getUser()).data.user;
-      const { data } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).order('created_at', { ascending: false });
-      document.getElementById('my-investments').innerHTML = data?.map(i => `
-        <div class="card mb-1">
-          <strong>${i.products?.name}</strong> – ₦${i.amount.toLocaleString()} 
-          <span class="badge badge-${i.status === 'active' ? 'success' : 'default'}">${i.status}</span>
-          <p>Daily: ₦${i.daily_income.toLocaleString()} | Earned: ₦${i.total_income.toLocaleString()} | Day ${i.days_elapsed}/${i.duration_days}</p>
-        </div>
-      `).join('') || 'No investments';
-    }
+async function invest(productId, amount) {
+  const user = (await supabase.auth.getUser()).data.user;
+  const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
+  if (amount < product.min_invest) return alert(`Minimum: ₦${product.min_invest}`);
+  const dailyIncome = (amount * product.daily_roi_percent) / 100;
+  const { error } = await supabase.from('investments').insert({
+    user_id: user.id, product_id: productId, amount, daily_income: dailyIncome, duration_days: product.duration_days
+  });
+  if (error) return alert(error.message);
+  alert('Investment created! It will be active upon deposit approval.');
+  location.reload();
+}
 
-    loadProducts();
-    loadMyInvestments();
-  </script>
-  <div id="footer-container"></div>
-  <script src="/assets/js/components.js"></script>
+async function loadMyInvestments() {
+  const user = (await supabase.auth.getUser()).data.user;
+  const { data } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).order('created_at', { ascending: false });
+  document.getElementById('my-investments').innerHTML = data?.map(i => `
+    <div class="card mb-1">
+      <strong>${i.products?.name}</strong> – ₦${i.amount.toLocaleString()}
+      <span class="badge badge-${i.status === 'active' ? 'success' : 'default'}">${i.status}</span>
+      <p>Daily: ₦${i.daily_income.toLocaleString()} | Earned: ₦${i.total_income.toLocaleString()} | Day ${i.days_elapsed}/${i.duration_days}</p>
+    </div>
+  `).join('') || 'No investments';
+}
+
+loadProducts();
+loadMyInvestments();
+</script>
 </body>
 </html>
