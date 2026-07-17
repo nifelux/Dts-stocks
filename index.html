@@ -1,182 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DTL Stocks – Smart Long-Term Investments</title>
-  <link rel="stylesheet" href="assets/css/style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    .hero { background: linear-gradient(135deg, #facc15 0%, #eab308 100%); padding: 6rem 2rem; text-align: center; color: #000; }
-    .hero h1 { font-size: 3rem; margin-bottom: 1rem; }
-    .hero p { font-size: 1.25rem; max-width: 600px; margin: 0 auto 2rem; }
-    .section { padding: 4rem 2rem; max-width: 1200px; margin: auto; }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
-    .testimonial-card { background: var(--clr-card); padding: 1.5rem; border-radius: var(--radius); box-shadow: var(--shadow); }
-    .stats-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 2rem; }
-    .stat-item { text-align: center; }
-    .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--clr-primary); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DTL Stocks – Smart Long-Term Investments</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+.hero { background: linear-gradient(135deg, #facc15 0%, #eab308 100%); padding: 6rem 2rem; text-align: center; color: #000; }
+.hero h1 { font-size: 3rem; margin-bottom: 1rem; }
+.hero p { font-size: 1.25rem; max-width: 600px; margin: 0 auto 2rem; }
+.section { padding: 4rem 2rem; max-width: 1200px; margin: auto; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+.testimonial-card { background: var(--clr-card); padding: 1.5rem; border-radius: var(--radius); box-shadow: var(--shadow); }
+.stats-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 2rem; }
+.stat-item { text-align: center; }
+.stat-number { font-size: 2.5rem; font-weight: 700; color: var(--clr-primary); }
+</style>
 </head>
 <body>
-  <div id="header-container"></div>>
-  <nav class="navbar">
-    <div class="logo"><strong>DTL Stocks</strong></div>
-    <ul class="nav-links">
-      <li><a href="#about">About</a></li>
-      <li><a href="#invest">Investments</a></li>
-      <li><a href="#process">Process</a></li>
-      <li><a href="#vip">VIP</a></li>
-      <li><a href="#faq">FAQ</a></li>
-      <li><a href="login.html" class="btn btn-primary btn-sm">Login</a></li>
-      <li><a href="register.html" class="btn btn-outline btn-sm">Register</a></li>
-    </ul>
-  </nav>
+<div id="header-container"></div>
 
-  <section class="hero">
-    <h1>Grow Your Wealth with DTL Stocks</h1>
-    <p>Secure long-term investments with daily returns. Trusted by thousands of Nigerians to build generational wealth.</p>
-    <a href="register.html" class="btn btn-primary btn-lg">Start Investing Now</a>
-  </section>
+<section class="hero">
+<h1>Grow Your Wealth with DTL Stocks</h1>
+<p>Secure long-term investments with daily returns. Trusted by thousands of Nigerians to build generational wealth.</p>
+<a href="register.html" class="btn btn-primary btn-lg">Start Investing Now</a>
+</section>
 
-  <section id="about" class="section">
-    <h2 class="text-center mb-2">About DTL Stocks</h2>
-    <p class="text-center">DTL Stocks is a premier investment platform dedicated to providing stable, long-term growth opportunities. We leverage diversified portfolios across real estate, agriculture, and technology to deliver consistent daily returns to our investors.</p>
-    <div class="grid-3 mt-3">
-      <div class="card text-center">
-        <h3>Our Mission</h3>
-        <p>To democratize wealth creation by making profitable investments accessible to every Nigerian.</p>
-      </div>
-      <div class="card text-center">
-        <h3>Our Vision</h3>
-        <p>To become Africa's most trusted investment platform, powering financial freedom for millions.</p>
-      </div>
-      <div class="card text-center">
-        <h3>Why Long-Term?</h3>
-        <p>Long-term investments compound your returns, minimize risk, and provide predictable income streams.</p>
-      </div>
+<section id="about" class="section">
+<h2 class="text-center mb-2">About DTL Stocks</h2>
+<p class="text-center">DTL Stocks is a premier investment platform dedicated to providing stable, long-term growth opportunities. We leverage diversified portfolios across real estate, agriculture, and technology to deliver consistent daily returns to our investors.</p>
+<div class="grid-3 mt-3">
+<div class="card text-center">
+<h3>Our Mission</h3>
+<p>To democratize wealth creation by making profitable investments accessible to every Nigerian.</p>
+</div>
+<div class="card text-center">
+<h3>Our Vision</h3>
+<p>To become Africa's most trusted investment platform, powering financial freedom for millions.</p>
+</div>
+<div class="card text-center">
+<h3>Why Long-Term?</h3>
+<p>Long-term investments compound your returns, minimize risk, and provide predictable income streams.</p>
+</div>
+</div>
+</section>
+
+<section id="invest" class="section" style="background: var(--clr-surface);">
+<h2 class="text-center mb-2">Investment Products</h2>
+<div class="grid-3" id="products-container">
+<div class="card">Loading...</div>
+</div>
+</section>
+
+<section id="process" class="section">
+<h2 class="text-center mb-2">How It Works</h2>
+<div class="grid-3">
+<div class="card text-center">
+<h3>1. Register</h3>
+<p>Create your free account in minutes.</p>
+</div>
+<div class="card text-center">
+<h3>2. Deposit</h3>
+<p>Fund your wallet via bank transfer.</p>
+</div>
+<div class="card text-center">
+<h3>3. Invest</h3>
+<p>Choose a product and start earning daily.</p>
+</div>
+</div>
+</section>
+
+<section id="vip" class="section" style="background: var(--clr-surface);">
+<h2 class="text-center mb-2">VIP Program</h2>
+<p class="text-center">Unlock exclusive benefits as you grow with us.</p>
+<div class="grid-3 mt-3" id="vip-container">
+<div class="card">Loading...</div>
+</div>
+</section>
+
+<section class="section stats">
+<h2 class="text-center mb-2">Platform Statistics</h2>
+<div class="stats-row" id="stats-container">
+<div class="stat-item"><div class="stat-number">0</div><div>Registered Users</div></div>
+<div class="stat-item"><div class="stat-number">₦0</div><div>Total Investments</div></div>
+<div class="stat-item"><div class="stat-number">₦0</div><div>Paid Returns</div></div>
+<div class="stat-item"><div class="stat-number">100%</div><div>Secure</div></div>
+</div>
+</section>
+
+<section id="faq" class="section">
+<h2 class="text-center mb-2">Frequently Asked Questions</h2>
+<div class="grid-3">
+<div class="card">
+<h4>Is my investment safe?</h4>
+<p>Yes, we use diversified asset allocation and capital protection strategies.</p>
+</div>
+<div class="card">
+<h4>How do I withdraw?</h4>
+<p>Simply request a withdrawal from your dashboard; processed within hours during working hours.</p>
+</div>
+<div class="card">
+<h4>What is the minimum deposit?</h4>
+<p>You can start with as low as ₦5,000.</p>
+</div>
+</div>
+</section>
+
+<section class="section testimonials">
+<h2 class="text-center mb-2">What Our Investors Say</h2>
+<div class="grid-3">
+<div class="testimonial-card">"I've been with DTL Stocks for 2 years. Consistent returns!" – <strong>Chidi A.</strong></div>
+<div class="testimonial-card">"The VIP program rewards loyalty. I love it." – <strong>Fatima K.</strong></div>
+<div class="testimonial-card">"Finally, an investment platform I can trust." – <strong>Emeka O.</strong></div>
+</div>
+</section>
+
+<footer style="text-align:center; padding:2rem; background:var(--clr-card); margin-top:2rem;">
+<p>DTL Stocks &copy; 2026. All rights reserved. | <a href="about.html">About</a> | <a href="contact.html">Contact</a> | <a href="faq.html">FAQ</a></p>
+</footer>
+
+<div id="footer-container"></div>
+<script src="/assets/js/components.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
+window.supabase = supabase;
+
+async function loadProducts() {
+  const { data } = await supabase.from('products').select('*').eq('is_locked', false).limit(3);
+  const container = document.getElementById('products-container');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card">No products available yet.</div>';
+    return;
+  }
+  container.innerHTML = data.map(p => `
+    <div class="card">
+      <h3>${p.name}</h3>
+      <p>${p.description || ''}</p>
+      <p><strong>Daily ROI:</strong> ${p.daily_roi_percent}%</p>
+      <p><strong>Duration:</strong> ${p.duration_days} days</p>
+      <p><strong>Min:</strong> ₦${p.min_invest.toLocaleString()}</p>
+      <a href="register.html" class="btn btn-primary btn-sm">Invest Now</a>
     </div>
-  </section>
+  `).join('');
+}
 
-  <section id="invest" class="section" style="background: var(--clr-surface);">
-    <h2 class="text-center mb-2">Investment Products</h2>
-    <div class="grid-3" id="products-container">
-      <div class="card">Loading...</div>
+async function loadVIP() {
+  const { data } = await supabase.from('vip_levels').select('*').order('min_deposit', { ascending: true });
+  const container = document.getElementById('vip-container');
+  if (!data) return;
+  container.innerHTML = data.map(v => `
+    <div class="card">
+      <h3>${v.level.toUpperCase()}</h3>
+      <p>Min Deposit: ₦${v.min_deposit.toLocaleString()}</p>
+      <p>Min Investments: ${v.min_investments}</p>
+      <p>Min Referrals: ${v.min_referrals}</p>
+      <p>Bonus: ${v.daily_bonus_percent}%</p>
     </div>
-  </section>
+  `).join('');
+}
 
-  <section id="process" class="section">
-    <h2 class="text-center mb-2">How It Works</h2>
-    <div class="grid-3">
-      <div class="card text-center">
-        <h3>1. Register</h3>
-        <p>Create your free account in minutes.</p>
-      </div>
-      <div class="card text-center">
-        <h3>2. Deposit</h3>
-        <p>Fund your wallet via bank transfer.</p>
-      </div>
-      <div class="card text-center">
-        <h3>3. Invest</h3>
-        <p>Choose a product and start earning daily.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="vip" class="section" style="background: var(--clr-surface);">
-    <h2 class="text-center mb-2">VIP Program</h2>
-    <p class="text-center">Unlock exclusive benefits as you grow with us.</p>
-    <div class="grid-3 mt-3" id="vip-container">
-      <div class="card">Loading...</div>
-    </div>
-  </section>
-
-  <section class="section stats">
-    <h2 class="text-center mb-2">Platform Statistics</h2>
-    <div class="stats-row" id="stats-container">
-      <div class="stat-item"><div class="stat-number">0</div><div>Registered Users</div></div>
-      <div class="stat-item"><div class="stat-number">₦0</div><div>Total Investments</div></div>
-      <div class="stat-item"><div class="stat-number">₦0</div><div>Paid Returns</div></div>
-      <div class="stat-item"><div class="stat-number">100%</div><div>Secure</div></div>
-    </div>
-  </section>
-
-  <section id="faq" class="section">
-    <h2 class="text-center mb-2">Frequently Asked Questions</h2>
-    <div class="grid-3">
-      <div class="card">
-        <h4>Is my investment safe?</h4>
-        <p>Yes, we use diversified asset allocation and capital protection strategies.</p>
-      </div>
-      <div class="card">
-        <h4>How do I withdraw?</h4>
-        <p>Simply request a withdrawal from your dashboard; processed within hours during working hours.</p>
-      </div>
-      <div class="card">
-        <h4>What is the minimum deposit?</h4>
-        <p>You can start with as low as ₦5,000.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="section testimonials">
-    <h2 class="text-center mb-2">What Our Investors Say</h2>
-    <div class="grid-3">
-      <div class="testimonial-card">"I've been with DTL Stocks for 2 years. Consistent returns!" – <strong>Chidi A.</strong></div>
-      <div class="testimonial-card">"The VIP program rewards loyalty. I love it." – <strong>Fatima K.</strong></div>
-      <div class="testimonial-card">"Finally, an investment platform I can trust." – <strong>Emeka O.</strong></div>
-    </div>
-  </section>
-
-  <footer style="text-align:center; padding:2rem; background:var(--clr-card); margin-top:2rem;">
-    <p>DTL Stocks &copy; 2026. All rights reserved. | <a href="about.html">About</a> | <a href="contact.html">Contact</a> | <a href="faq.html">FAQ</a></p>
-  </footer>
-
-  <!-- Shared JS modules -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-    const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
-    window.supabase = supabase;
-
-    async function loadProducts() {
-      const { data } = await supabase.from('products').select('*').eq('is_locked', false).limit(3);
-      const container = document.getElementById('products-container');
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div class="card">No products available yet.</div>';
-        return;
-      }
-      container.innerHTML = data.map(p => `
-        <div class="card">
-          <h3>${p.name}</h3>
-          <p>${p.description || ''}</p>
-          <p><strong>Daily ROI:</strong> ${p.daily_roi_percent}%</p>
-          <p><strong>Duration:</strong> ${p.duration_days} days</p>
-          <p><strong>Min:</strong> ₦${p.min_invest.toLocaleString()}</p>
-          <a href="register.html" class="btn btn-primary btn-sm">Invest Now</a>
-        </div>
-      `).join('');
-    }
-
-    async function loadVIP() {
-      const { data } = await supabase.from('vip_levels').select('*').order('min_deposit', { ascending: true });
-      const container = document.getElementById('vip-container');
-      if (!data) return;
-      container.innerHTML = data.map(v => `
-        <div class="card">
-          <h3>${v.level.toUpperCase()}</h3>
-          <p>Min Deposit: ₦${v.min_deposit.toLocaleString()}</p>
-          <p>Min Investments: ${v.min_investments}</p>
-          <p>Min Referrals: ${v.min_referrals}</p>
-          <p>Bonus: ${v.daily_bonus_percent}%</p>
-        </div>
-      `).join('');
-    }
-
-    loadProducts();
-    loadVIP();
-  </script>
-  <div id="footer-container"></div>
-  <script src="/assets/js/components.js"></script>
+loadProducts();
+loadVIP();
+</script>
 </body>
 </html>
