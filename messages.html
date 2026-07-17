@@ -1,10 +1,30 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Messages</title><link rel="stylesheet" href="assets/css/style.css"></head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Messages</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
 <body>
-  <div id="header-container"></div>><nav class="navbar"><div class="logo">DTL Stocks</div></nav><div class="section"><h2>Messages</h2><div id="msgs">Loading...</div></div>
+<div id="header-container"></div>
+<div class="section"><h2>Messages</h2><div id="msgs">Loading...</div></div>
+
+<div id="footer-container"></div>
+<script src="/assets/js/components.js"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
-(async()=>{const u=(await supabase.auth.getUser()).data.user;const {data}=await supabase.from('notifications').select('*').eq('user_id',u.id).order('created_at',{ascending:false});document.getElementById('msgs').innerHTML=data?.map(n=>`<div class="card mb-1"><strong>${n.title}</strong><p>${n.body}</p></div>`).join('')||'No messages';})();
-</script>  <div id="footer-container"></div>
-  <script src="/assets/js/components.js"></script>
-</body></html>
+
+// Required so the shared header (assets/js/components.js) can detect
+// the logged-in session — without this it always shows the guest menu.
+window.supabase = supabase;
+
+(async () => {
+  const u = (await supabase.auth.getUser()).data.user;
+  if (!u) return;
+  const { data } = await supabase.from('notifications').select('*').eq('user_id', u.id).order('created_at', { ascending: false });
+  document.getElementById('msgs').innerHTML = data?.map(n => `<div class="card mb-1"><strong>${n.title}</strong><p>${n.body}</p></div>`).join('') || 'No messages';
+})();
+</script>
+</body>
+</html>
