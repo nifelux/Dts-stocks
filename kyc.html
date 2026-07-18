@@ -4,38 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KYC Verification – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 <div id="header-container"></div>
 
-<div class="section" style="max-width:500px; margin:auto; padding-top: 80px;">
-  <h2>Identity Verification</h2>
-  <p class="alert alert-info" id="kyc-status-banner">
-    To prevent duplicate accounts, please upload your face image and provide your full legal name.
-    Both are required before withdrawals.
-  </p>
+<div class="section dashboard-page" style="max-width:520px;">
+  <div class="card text-center mb-2">
+    <span class="kyc-hero-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </span>
+    <h2 style="font-family:var(--font-display); font-weight:600;">Identity Verification</h2>
+    <p id="kyc-status-banner" class="text-muted" style="margin-bottom:0;">
+      Upload your face image and full legal name to unlock withdrawals.
+    </p>
+  </div>
 
-  <form id="kyc-form">
+  <form id="kyc-form" class="card">
     <div class="form-group">
-      <label>Full Legal Name (as on ID)</label>
+      <label class="form-label">Full Legal Name (as on ID)</label>
       <input type="text" id="full_name" class="form-input" required>
     </div>
 
     <div class="form-group">
-      <label>Upload Clear Face Image (Selfie)</label>
-      <input type="file" id="face-image" class="form-input" accept="image/*" required>
+      <label class="form-label">Face Image (Selfie)</label>
+      <label class="upload-tile" id="upload-tile">
+        <input type="file" id="face-image" accept="image/*" required>
+        <span class="upload-tile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+        </span>
+        <span class="upload-tile-text" id="upload-tile-text">Tap to choose a photo</span>
+        <div class="upload-tile-hint">Clear, well-lit, face fully visible</div>
+      </label>
     </div>
 
     <button type="submit" id="kyc-submit-btn" class="btn btn-primary btn-block">Submit Verification</button>
   </form>
 
-  <h3 class="mt-3">Submitted Documents</h3>
-  <div id="docs-list">Loading…</div>
+  <h3 class="mt-3 mb-2">Submitted Documents</h3>
+  <div id="docs-list"><div class="card">Loading…</div></div>
 </div>
 
 <div id="footer-container"></div>
-
 <script src="/assets/js/components.js"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -47,7 +59,7 @@ const supabase = createClient(
 window.supabase = supabase;
 
 // Bucket is PRIVATE — every path is scoped to the user's own folder so the
-// storage RLS policy (see kyc_storage_policies.sql) can enforce ownership.
+// storage RLS policy can enforce ownership.
 const DOC_TYPES = [
   { inputId: 'face-image', docType: 'selfie', label: 'Selfie' }
 ];
@@ -65,21 +77,23 @@ function escapeHtml(str) {
 
 async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    window.location.href = '/login.html';
-    throw new Error('Not authenticated');
-  }
+  if (!user) { window.location.href = '/login.html'; throw new Error('Not authenticated'); }
   return user;
 }
 
 async function getProfile(userId) {
-  const { data } = await supabase
-    .from('profiles')
-    .select('kyc_status, full_name')
-    .eq('id', userId)
-    .single();
+  const { data } = await supabase.from('profiles').select('kyc_status, full_name').eq('id', userId).single();
   return data;
 }
+
+document.getElementById('face-image').addEventListener('change', (e) => {
+  const tile = document.getElementById('upload-tile');
+  const text = document.getElementById('upload-tile-text');
+  if (e.target.files[0]) {
+    tile.classList.add('has-file');
+    text.textContent = e.target.files[0].name;
+  }
+});
 
 document.getElementById('kyc-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -89,29 +103,18 @@ document.getElementById('kyc-form').addEventListener('submit', async (e) => {
 
   try {
     const user = await getCurrentUser();
-
     const profile = await getProfile(user.id);
-    if (profile?.kyc_status === 'approved') {
-      alert('Your identity is already verified.');
-      return;
-    }
+    if (profile?.kyc_status === 'approved') { alert('Your identity is already verified.'); return; }
 
     const fullName = document.getElementById('full_name').value.trim();
-    if (!fullName) {
-      alert('Please enter your full legal name.');
-      return;
-    }
+    if (!fullName) { alert('Please enter your full legal name.'); return; }
 
     for (const { inputId, label } of DOC_TYPES) {
-      if (!document.getElementById(inputId).files[0]) {
-        alert(`Please upload your ${label}.`);
-        return;
-      }
+      if (!document.getElementById(inputId).files[0]) { alert(`Please upload your ${label}.`); return; }
     }
 
     for (const { inputId, docType, label } of DOC_TYPES) {
       const file = document.getElementById(inputId).files[0];
-      // e.g. "3f2a.../selfie_1737012345.jpg" — first path segment must equal auth.uid()
       const path = `${user.id}/${docType}_${Date.now()}.${extOf(file)}`;
 
       const { error: uploadErr } = await supabase.storage
@@ -120,19 +123,12 @@ document.getElementById('kyc-form').addEventListener('submit', async (e) => {
       if (uploadErr) throw new Error(`${label} upload failed: ${uploadErr.message}`);
 
       const { error: insertErr } = await supabase.from('kyc_documents').insert({
-        user_id: user.id,
-        doc_type: docType,
-        image_url: path, // storage PATH, not a public URL — resolved via signed URL on view
-        status: 'pending'
+        user_id: user.id, doc_type: docType, image_url: path, status: 'pending'
       });
       if (insertErr) throw new Error(`Saving ${label} record failed: ${insertErr.message}`);
     }
 
-    await supabase
-      .from('profiles')
-      .update({ full_name: fullName, kyc_status: 'pending' })
-      .eq('id', user.id);
-
+    await supabase.from('profiles').update({ full_name: fullName, kyc_status: 'pending' }).eq('id', user.id);
     alert('Verification submitted. An admin will review your documents shortly.');
     location.reload();
   } catch (err) {
@@ -151,7 +147,7 @@ async function loadDocs() {
   const form = document.getElementById('kyc-form');
 
   if (profile?.kyc_status === 'approved') {
-    banner.textContent = 'Your identity is verified. Thank you!';
+    banner.innerHTML = '<span class="badge badge-success">Verified</span>';
     form.style.display = 'none';
   } else if (profile?.kyc_status === 'pending') {
     banner.textContent = 'Your documents are under review. We will notify you once verified.';
@@ -160,31 +156,30 @@ async function loadDocs() {
   }
 
   const { data: docs, error } = await supabase
-    .from('kyc_documents')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('submitted_at', { ascending: false });
+    .from('kyc_documents').select('*').eq('user_id', user.id).order('submitted_at', { ascending: false });
 
   const list = document.getElementById('docs-list');
   if (error || !docs || docs.length === 0) {
-    list.innerHTML = 'No documents submitted yet.';
+    list.innerHTML = '<div class="card text-muted">No documents submitted yet.</div>';
     return;
   }
 
-  list.innerHTML = '';
-  for (const doc of docs) {
-    // Short-lived signed URL — the bucket has no public access.
+  const statusTone = { pending: 'tone-yellow', approved: 'tone-green', rejected: 'tone-ink' };
+  list.innerHTML = `<div class="card">${(await Promise.all(docs.map(async doc => {
     const { data: signed } = await supabase.storage.from('kyc').createSignedUrl(doc.image_url, 300);
-
-    const card = document.createElement('div');
-    card.className = 'card mb-1';
-    card.innerHTML = `
-      ${escapeHtml(doc.doc_type)} – <span class="badge">${escapeHtml(doc.status)}</span>
-      ${doc.admin_notes ? `<div class="text-muted" style="font-size:0.85em;">${escapeHtml(doc.admin_notes)}</div>` : ''}
-      ${signed?.signedUrl ? `<a href="${signed.signedUrl}" target="_blank" rel="noopener">View (expires in 5 min)</a>` : ''}
-    `;
-    list.appendChild(card);
-  }
+    return `
+      <div class="txn-row">
+        <span class="txn-icon ${statusTone[doc.status] || 'tone-ink'}" style="background:#EFEDF5;color:var(--clr-purple-ink);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        </span>
+        <div class="txn-body">
+          <div class="txn-title">${escapeHtml(doc.doc_type)}</div>
+          ${doc.admin_notes ? `<div class="text-muted" style="font-size:0.78rem;">${escapeHtml(doc.admin_notes)}</div>` : ''}
+        </div>
+        <span class="badge badge-${doc.status === 'approved' ? 'success' : doc.status === 'rejected' ? 'danger' : ''}">${escapeHtml(doc.status)}</span>
+        ${signed?.signedUrl ? `<a href="${signed.signedUrl}" target="_blank" rel="noopener" style="margin-left:0.5rem; font-size:0.78rem;">View</a>` : ''}
+      </div>`;
+  }))).join('')}</div>`;
 }
 
 loadDocs();
