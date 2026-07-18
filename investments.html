@@ -100,7 +100,7 @@ async function invest(productId, amount) {
   const token = await getToken();
   let res;
   try {
-    res = await fetch('/api/investments?action=createInvestment', {
+    res = await fetch('/api/investment?action=createInvestment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ product_id: productId, amount })
