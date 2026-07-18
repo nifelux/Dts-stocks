@@ -3,297 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transaction history · DTL Stocks</title>
+<title>Transaction History – DTL Stocks</title>
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+<div id="header-container"></div>
 
-<!-- ============ HEADER ============ -->
-<header class="floating-header">
-  <div class="header-container">
-    <a href="dashboard.html" class="brand">
-      <span class="brand-mark">DT</span>
-      <span class="brand-name">DTL<span class="accent">Stocks</span></span>
-    </a>
+<div class="section">
+  <h2>Transaction History</h2>
+  <table id="txn-table"><thead><tr><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody></tbody></table>
+</div>
 
-    <nav class="nav-links">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="investments.html" class="nav-link">Investments</a>
-      <a href="deposit.html" class="nav-link">Deposit</a>
-      <a href="withdraw.html" class="nav-link">Withdraw</a>
-      <a href="transaction-history.html" class="nav-link" style="background:var(--clr-surface);color:var(--clr-primary-hover)">History</a>
-      <div class="nav-dropdown" id="accountDropdown">
-        <button class="nav-link dropdown-toggle" onclick="toggleDropdown('accountDropdown')">
-          <span class="avatar-circle">JC</span>
-          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="dropdown-menu dropdown-menu-right">
-          <a href="profile.html">Profile</a>
-          <a href="kyc.html">Verification</a>
-          <a href="referral.html">Referrals</a>
-          <a href="settings.html">Settings</a>
-          <a href="support.html">Support</a>
-          <a href="login.html">Log out</a>
-        </div>
-      </div>
-    </nav>
+<div id="footer-container"></div>
+<script src="/assets/js/components.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient(
+  'https://jytmnukzvxirnafukbck.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
+);
 
-    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()" aria-label="Menu">
-      <span class="hamburger"><span></span><span></span><span></span></span>
-    </button>
-  </div>
-</header>
+// Required so the shared header (assets/js/components.js) can detect
+// the logged-in session — without this it always shows the guest menu.
+window.supabase = supabase;
 
-<!-- ============ MOBILE DRAWER ============ -->
-<div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
-<aside class="mobile-menu" id="mobileMenu">
-  <div class="mobile-menu-header">
-    Menu
-    <button class="mobile-close" onclick="toggleMobileMenu()">&times;</button>
-  </div>
-  <div class="mobile-menu-content">
-    <div class="mobile-user-card">
-      <span class="avatar-circle avatar-circle-lg">JC</span>
-      <div class="mobile-user-name">Joy Chukwu</div>
-    </div>
-    <a href="dashboard.html" class="mobile-link">Dashboard</a>
-    <a href="investments.html" class="mobile-link">Investments</a>
-    <a href="deposit.html" class="mobile-link">Deposit</a>
-    <a href="withdraw.html" class="mobile-link">Withdraw</a>
-    <a href="transaction-history.html" class="mobile-link">History</a>
-    <a href="referral.html" class="mobile-link">Referrals</a>
-    <a href="kyc.html" class="mobile-link">Verification</a>
-    <a href="support.html" class="mobile-link">Support</a>
-  </div>
-  <div class="mobile-menu-footer">
-    <a href="settings.html" class="btn btn-outline btn-block">Settings</a>
-    <a href="login.html" class="btn btn-block" style="color:var(--clr-danger)">Log out</a>
-  </div>
-</aside>
-
-<!-- ============ PAGE ============ -->
-<main class="money-page" style="max-width:720px">
-  <div class="back-row">
-    <a href="dashboard.html" class="back-btn" aria-label="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </a>
-    <h2>Transaction history</h2>
-  </div>
-
-  <div class="filter-chips" id="filterChips">
-    <button class="filter-chip is-active" data-filter="all">All</button>
-    <button class="filter-chip" data-filter="deposit">Deposits</button>
-    <button class="filter-chip" data-filter="withdrawal">Withdrawals</button>
-    <button class="filter-chip" data-filter="earning">Earnings</button>
-    <button class="filter-chip" data-filter="referral">Referral</button>
-    <button class="filter-chip" data-filter="gift">Gifts</button>
-  </div>
-
-  <div class="card" id="historyCard">
-
-    <div class="date-divider">Today</div>
-
-    <div class="txn-row" data-type="earning">
-      <div class="txn-icon tone-purple">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Daily earning · Gold Plan</div>
-        <div class="txn-date">9:00 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦2,400.00</div>
-        <span class="badge badge-success">Completed</span>
-      </div>
-    </div>
-
-    <div class="txn-row" data-type="deposit">
-      <div class="txn-icon tone-green">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Bank transfer deposit</div>
-        <div class="txn-date">9:42 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦50,000.00</div>
-        <span class="badge badge-success">Approved</span>
-      </div>
-    </div>
-
-    <div class="date-divider">Yesterday</div>
-
-    <div class="txn-row" data-type="withdrawal">
-      <div class="txn-icon tone-danger">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Withdrawal to GTBank ····4521</div>
-        <div class="txn-date">2:30 PM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-out">-₦30,000.00</div>
-        <span class="badge badge-success">Approved</span>
-      </div>
-    </div>
-
-    <div class="txn-row" data-type="referral">
-      <div class="txn-icon tone-purple">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Referral bonus · Amaka O.</div>
-        <div class="txn-date">10:05 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦1,000.00</div>
-        <span class="badge badge-success">Completed</span>
-      </div>
-    </div>
-
-    <div class="date-divider">Jul 14, 2026</div>
-
-    <div class="txn-row" data-type="earning">
-      <div class="txn-icon tone-purple">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Daily earning · Gold Plan</div>
-        <div class="txn-date">9:00 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦2,400.00</div>
-        <span class="badge badge-success">Completed</span>
-      </div>
-    </div>
-
-    <div class="txn-row" data-type="gift">
-      <div class="txn-icon tone-yellow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Gift code · WELCOME25</div>
-        <div class="txn-date">8:20 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦2,500.00</div>
-        <span class="badge badge-success">Completed</span>
-      </div>
-    </div>
-
-    <div class="date-divider">Jul 8, 2026</div>
-
-    <div class="txn-row" data-type="withdrawal">
-      <div class="txn-icon tone-danger">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Withdrawal to Access Bank ····8830</div>
-        <div class="txn-date">11:15 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-out">-₦15,000.00</div>
-        <span class="badge badge-warning">Pending</span>
-      </div>
-    </div>
-
-    <div class="txn-row" data-type="deposit">
-      <div class="txn-icon tone-green">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Bank transfer deposit</div>
-        <div class="txn-date">7:50 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦10,000.00</div>
-        <span class="badge badge-danger">Rejected</span>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Empty state, shown by JS when a filter has no matches -->
-  <div class="empty-state" id="emptyState" style="display:none">
-    <div class="empty-state-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-    </div>
-    <h4>Nothing here yet</h4>
-    <p>You don't have any transactions in this category yet.</p>
-  </div>
-</main>
-
-<!-- ============ BOTTOM TAB BAR ============ -->
-<nav class="tab-bar">
-  <a href="dashboard.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>
-    <span class="tab-label">Home</span>
-  </a>
-  <a href="investments.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-    <span class="tab-label">Invest</span>
-  </a>
-  <a href="deposit.html" class="tab-item is-active">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
-    <span class="tab-label">Wallet</span>
-  </a>
-  <a href="referral.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-    <span class="tab-label">Team</span>
-  </a>
-  <a href="profile.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-    <span class="tab-label">Profile</span>
-  </a>
-</nav>
-
-<script>
-function toggleMobileMenu(){
-  document.getElementById('mobileMenu').classList.toggle('active');
-  document.getElementById('mobileOverlay').classList.toggle('active');
-  document.getElementById('mobileToggle').classList.toggle('active');
+async function checkAuth() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) window.location.href = 'login.html';
+  return user;
 }
-function toggleDropdown(id){
-  document.getElementById(id).classList.toggle('open');
+
+function statusBadge(status) {
+  const map = { approved: 'badge-success', completed: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
+  return `<span class="badge ${map[status] || ''}">${status}</span>`;
 }
-document.addEventListener('click', function(e){
-  var dd = document.getElementById('accountDropdown');
-  if(dd && !dd.contains(e.target)) dd.classList.remove('open');
-});
 
-document.getElementById('filterChips').addEventListener('click', function(e){
-  var chip = e.target.closest('.filter-chip');
-  if(!chip) return;
-  document.querySelectorAll('.filter-chip').forEach(function(c){ c.classList.remove('is-active'); });
-  chip.classList.add('is-active');
+async function loadHistory(user) {
+  const { data } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(100);
 
-  var filter = chip.dataset.filter;
-  var rows = document.querySelectorAll('.txn-row');
-  var visibleCount = 0;
+  document.querySelector('#txn-table tbody').innerHTML = data?.map(t => `
+    <tr>
+      <td>${t.type}</td>
+      <td class="currency-ngn">${t.amount.toLocaleString()}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${new Date(t.created_at).toLocaleDateString()}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="text-muted">No transactions yet.</td></tr>';
+}
 
-  rows.forEach(function(row){
-    var match = filter === 'all' || row.dataset.type === filter;
-    row.style.display = match ? 'flex' : 'none';
-    if(match) visibleCount++;
-  });
-
-  // Hide date dividers that have no visible rows under them
-  document.querySelectorAll('.date-divider').forEach(function(div){
-    var sib = div.nextElementSibling;
-    var hasVisible = false;
-    while(sib && !sib.classList.contains('date-divider')){
-      if(sib.classList.contains('txn-row') && sib.style.display !== 'none') hasVisible = true;
-      sib = sib.nextElementSibling;
-    }
-    div.style.display = hasVisible ? 'block' : 'none';
-  });
-
-  document.getElementById('historyCard').style.display = visibleCount ? 'block' : 'none';
-  document.getElementById('emptyState').style.display = visibleCount ? 'none' : 'block';
-});
+checkAuth().then(user => { if (user) loadHistory(user); });
 </script>
 </body>
-          </html>
-          
+</html>
