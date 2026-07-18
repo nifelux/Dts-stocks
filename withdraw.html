@@ -1,245 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Withdraw · DTL Stocks</title>
-<link rel="stylesheet" href="assets/css/style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Withdraw – DTL Stocks</title>
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+  <div id="header-container"></div>
 
-<!-- ============ HEADER ============ -->
-<header class="floating-header">
-  <div class="header-container">
-    <a href="dashboard.html" class="brand">
-      <span class="brand-mark">DT</span>
-      <span class="brand-name">DTL<span class="accent">Stocks</span></span>
-    </a>
+  <div class="section" style="max-width:500px; margin:auto;">
+    <h2>Withdraw Funds</h2>
 
-    <nav class="nav-links">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="investments.html" class="nav-link">Investments</a>
-      <a href="deposit.html" class="nav-link">Deposit</a>
-      <a href="withdraw.html" class="nav-link" style="background:var(--clr-surface);color:var(--clr-primary-hover)">Withdraw</a>
-      <a href="transaction-history.html" class="nav-link">History</a>
-      <div class="nav-dropdown" id="accountDropdown">
-        <button class="nav-link dropdown-toggle" onclick="toggleDropdown('accountDropdown')">
-          <span class="avatar-circle">JC</span>
-          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="dropdown-menu dropdown-menu-right">
-          <a href="profile.html">Profile</a>
-          <a href="kyc.html">Verification</a>
-          <a href="referral.html">Referrals</a>
-          <a href="settings.html">Settings</a>
-          <a href="support.html">Support</a>
-          <a href="login.html">Log out</a>
-        </div>
-      </div>
-    </nav>
-
-    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()" aria-label="Menu">
-      <span class="hamburger"><span></span><span></span><span></span></span>
-    </button>
-  </div>
-</header>
-
-<!-- ============ MOBILE DRAWER ============ -->
-<div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
-<aside class="mobile-menu" id="mobileMenu">
-  <div class="mobile-menu-header">
-    Menu
-    <button class="mobile-close" onclick="toggleMobileMenu()">&times;</button>
-  </div>
-  <div class="mobile-menu-content">
-    <div class="mobile-user-card">
-      <span class="avatar-circle avatar-circle-lg">JC</span>
-      <div class="mobile-user-name">Joy Chukwu</div>
+    <div class="card mb-2" id="balance-note" style="display:none;">
+      <span class="text-muted">Available balance:</span>
+      <strong class="currency-ngn" id="available-balance">0</strong>
     </div>
-    <a href="dashboard.html" class="mobile-link">Dashboard</a>
-    <a href="investments.html" class="mobile-link">Investments</a>
-    <a href="deposit.html" class="mobile-link">Deposit</a>
-    <a href="withdraw.html" class="mobile-link">Withdraw</a>
-    <a href="transaction-history.html" class="mobile-link">History</a>
-    <a href="referral.html" class="mobile-link">Referrals</a>
-    <a href="kyc.html" class="mobile-link">Verification</a>
-    <a href="support.html" class="mobile-link">Support</a>
-  </div>
-  <div class="mobile-menu-footer">
-    <a href="settings.html" class="btn btn-outline btn-block">Settings</a>
-    <a href="login.html" class="btn btn-block" style="color:var(--clr-danger)">Log out</a>
-  </div>
-</aside>
 
-<!-- ============ PAGE ============ -->
-<main class="money-page">
-  <div class="back-row">
-    <a href="dashboard.html" class="back-btn" aria-label="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </a>
-    <h2>Withdraw</h2>
+    <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
+    <div id="kyc-gate"></div>
+
+    <form id="withdraw-form">
+      <div class="form-group"><label class="form-label">Amount (₦)</label><input type="number" id="amount" class="form-input" required></div>
+      <div class="form-group"><label class="form-label">Bank Name</label><input id="bank_name" class="form-input" required></div>
+      <div class="form-group"><label class="form-label">Account Number</label><input id="account_number" class="form-input" required maxlength="10"></div>
+      <div class="form-group"><label class="form-label">Account Name</label><input id="account_name" class="form-input" required></div>
+      <button type="submit" class="btn btn-primary btn-block" id="withdraw-submit-btn">Request Withdrawal</button>
+    </form>
+
+    <h3 class="mt-3">Withdrawal History</h3>
+    <div id="history">Loading…</div>
   </div>
 
-  <div class="balance-strip">
-    <div>
-      <div class="balance-strip-label">Available balance</div>
-      <div class="balance-strip-value currency-ngn">128,450.00</div>
-    </div>
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
-  </div>
+  <div id="footer-container"></div>
+  <script src="/assets/js/components.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient(
+      'https://jytmnukzvxirnafukbck.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
+    );
 
-  <div class="alert alert-info window-note">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    <span>Withdrawals are processed daily between <strong>10:00 AM and 5:00 PM</strong>. Requests submitted outside this window are queued for the next business day. Amounts must be between ₦5,000 and ₦500,000.</span>
-  </div>
+    // Required so the shared header (assets/js/components.js) can detect
+    // the logged-in session — without this it always shows the guest menu.
+    window.supabase = supabase;
 
-  <!-- Withdraw form -->
-  <form class="card" onsubmit="return submitWithdraw(event)">
-    <div class="form-group">
-      <label class="form-label" for="withdrawAmount">Amount to withdraw</label>
-      <div class="amount-field">
-        <span class="ngn-prefix">₦</span>
-        <input type="number" id="withdrawAmount" class="form-input" placeholder="0.00" min="5000" max="500000" step="0.01" required>
-      </div>
-      <div class="quick-amounts">
-        <button type="button" class="quick-amount" onclick="setAmount(5000,this)">₦5,000</button>
-        <button type="button" class="quick-amount" onclick="setAmount(10000,this)">₦10,000</button>
-        <button type="button" class="quick-amount" onclick="setAmount(25000,this)">₦25,000</button>
-        <button type="button" class="quick-amount" onclick="setAmount(50000,this)">₦50,000</button>
-      </div>
-      <div class="form-hint">Min ₦5,000 · Max ₦500,000 per request</div>
-    </div>
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) window.location.href = 'login.html';
+      return user;
+    }
 
-    <div class="form-group">
-      <label class="form-label" for="bankSelect">Receiving bank</label>
-      <select id="bankSelect" class="form-select" required>
-        <option value="" disabled selected>Select your bank</option>
-        <option>Access Bank</option>
-        <option>GTBank</option>
-        <option>Zenith Bank</option>
-        <option>UBA</option>
-        <option>First Bank</option>
-        <option>Opay</option>
-        <option>Kuda</option>
-      </select>
-    </div>
+    function showError(msg) {
+      const el = document.getElementById('error-alert');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function clearError() {
+      document.getElementById('error-alert').style.display = 'none';
+    }
 
-    <div class="form-group">
-      <label class="form-label" for="acctNumber">Account number</label>
-      <input type="text" id="acctNumber" class="form-input" placeholder="10-digit account number" pattern="[0-9]{10}" maxlength="10" required>
-    </div>
+    function statusBadge(status) {
+      const map = { approved: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
+      return `<span class="badge ${map[status] || ''}">${status}</span>`;
+    }
 
-    <div class="form-group">
-      <label class="form-label" for="acctName">Account name</label>
-      <input type="text" id="acctName" class="form-input" placeholder="Must match your verified name" required>
-      <div class="form-hint">Withdrawals only go to an account in your own name.</div>
-    </div>
+    let currentUser = null;
+    let currentBalance = 0;
 
-    <button type="submit" class="btn btn-primary btn-block btn-lg">Request withdrawal</button>
-    <p class="text-muted" style="text-align:center;font-size:0.78rem;margin-top:0.75rem;margin-bottom:0">Funds are held until an admin approves the request.</p>
-  </form>
+    async function loadBalanceAndGate(user) {
+      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single();
+      currentBalance = wallet?.balance || 0;
+      document.getElementById('available-balance').textContent = currentBalance.toLocaleString();
+      document.getElementById('balance-note').style.display = 'block';
 
-  <!-- Recent withdrawals -->
-  <div class="card mt-3">
-    <div class="card-header flex items-center" style="justify-content:space-between">
-      <h4 style="margin:0">Recent withdrawals</h4>
-      <a href="transaction-history.html" style="font-size:0.82rem;font-weight:600;color:var(--clr-purple-deep);text-decoration:none">See all</a>
-    </div>
+      const { data: profile } = await supabase.from('profiles').select('kyc_status').eq('id', user.id).single();
+      if (profile?.kyc_status !== 'approved') {
+        document.getElementById('kyc-gate').innerHTML =
+          '<div class="alert alert-danger">KYC verification required. Please <a href="/kyc.html">upload your face and full name</a> for identity verification.</div>';
+        document.getElementById('withdraw-form').style.display = 'none';
+      }
+    }
 
-    <div class="txn-row">
-      <div class="txn-icon tone-danger">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">To GTBank ····4521</div>
-        <div class="txn-date">Jul 14, 2026 · 2:30 PM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-out">-₦30,000.00</div>
-        <span class="badge badge-success">Approved</span>
-      </div>
-    </div>
+    document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      if (!currentUser) return;
 
-    <div class="txn-row">
-      <div class="txn-icon tone-danger">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">To Access Bank ····8830</div>
-        <div class="txn-date">Jul 8, 2026 · 11:15 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-out">-₦15,000.00</div>
-        <span class="badge badge-warning">Pending</span>
-      </div>
-    </div>
-  </div>
-</main>
+      const { data: settingsRow } = await supabase.from('settings').select('*').eq('key', 'withdrawal').single();
+      const wSet = settingsRow?.value || {};
+      if (wSet.enabled === false) return showError('Withdrawals are currently disabled.');
 
-<!-- ============ BOTTOM TAB BAR ============ -->
-<nav class="tab-bar">
-  <a href="dashboard.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>
-    <span class="tab-label">Home</span>
-  </a>
-  <a href="investments.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-    <span class="tab-label">Invest</span>
-  </a>
-  <a href="deposit.html" class="tab-item is-active">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
-    <span class="tab-label">Wallet</span>
-  </a>
-  <a href="referral.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-    <span class="tab-label">Team</span>
-  </a>
-  <a href="profile.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-    <span class="tab-label">Profile</span>
-  </a>
-</nav>
+      const amount = +document.getElementById('amount').value;
+      const bank_name = document.getElementById('bank_name').value;
+      const account_number = document.getElementById('account_number').value;
+      const account_name = document.getElementById('account_name').value;
 
-<script>
-function toggleMobileMenu(){
-  document.getElementById('mobileMenu').classList.toggle('active');
-  document.getElementById('mobileOverlay').classList.toggle('active');
-  document.getElementById('mobileToggle').classList.toggle('active');
-}
-function toggleDropdown(id){
-  document.getElementById(id).classList.toggle('open');
-}
-document.addEventListener('click', function(e){
-  var dd = document.getElementById('accountDropdown');
-  if(dd && !dd.contains(e.target)) dd.classList.remove('open');
-});
+      if (wSet.min_amount && amount < wSet.min_amount) return showError(`Minimum withdrawal is ₦${wSet.min_amount.toLocaleString()}.`);
+      if (wSet.max_amount && amount > wSet.max_amount) return showError(`Maximum withdrawal is ₦${wSet.max_amount.toLocaleString()} per request.`);
+      if (amount > currentBalance) return showError('That amount is more than your available balance.');
 
-function setAmount(val, btn){
-  document.getElementById('withdrawAmount').value = val;
-  document.querySelectorAll('.quick-amount').forEach(function(b){ b.classList.remove('is-active'); });
-  btn.classList.add('is-active');
-}
+      if (wSet.open_hour != null && wSet.close_hour != null) {
+        const hour = new Date().getHours();
+        if (hour < wSet.open_hour || hour >= wSet.close_hour) {
+          const proceed = confirm(`Withdrawals are processed between ${wSet.open_hour}:00 and ${wSet.close_hour}:00. Your request will be queued for the next window. Continue?`);
+          if (!proceed) return;
+        }
+      }
 
-var AVAILABLE_BALANCE = 128450.00;
-var MIN_WITHDRAW = 5000;
-var MAX_WITHDRAW = 500000;
+      const btn = document.getElementById('withdraw-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
 
-function submitWithdraw(e){
-  e.preventDefault();
-  var amount = parseFloat(document.getElementById('withdrawAmount').value);
-  if(!amount || amount < MIN_WITHDRAW){ alert('Minimum withdrawal is ₦5,000.'); return false; }
-  if(amount > MAX_WITHDRAW){ alert('Maximum withdrawal is ₦500,000 per request.'); return false; }
-  if(amount > AVAILABLE_BALANCE){ alert('That amount is more than your available balance.'); return false; }
-  var hour = new Date().getHours();
-  var withinWindow = hour >= 10 && hour < 17;
-  alert(withinWindow
-    ? 'Withdrawal request submitted for approval.'
-    : 'Withdrawal request queued — outside the 10 AM–5 PM processing window, so it will be reviewed next business day.');
-  return false;
-}
-</script>
+      const { error } = await supabase.from('withdrawals').insert({
+        user_id: currentUser.id, amount,
+        bank_details: { bank_name, account_number, account_name }
+      });
+
+      btn.disabled = false;
+      btn.textContent = 'Request Withdrawal';
+
+      if (error) return showError(error.message);
+      alert('Withdrawal request submitted!');
+      location.reload();
+    });
+
+    async function loadHistory(user) {
+      const { data } = await supabase.from('withdrawals').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      document.getElementById('history').innerHTML = data?.map(w => `
+        <div class="txn-row">
+          <span class="currency-ngn">${w.amount.toLocaleString()}</span>
+          ${statusBadge(w.status)}
+          <span class="text-muted" style="font-size:0.8rem;">${new Date(w.created_at).toLocaleDateString()}</span>
+        </div>`).join('') || '<p class="text-muted">No withdrawals yet.</p>';
+    }
+
+    checkAuth().then(async (user) => {
+      if (!user) return;
+      currentUser = user;
+      await loadBalanceAndGate(user);
+      await loadHistory(user);
+    });
+  </script>
 </body>
-        </html>
-  
+</html>
