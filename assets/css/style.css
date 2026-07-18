@@ -460,6 +460,13 @@ body{padding-bottom:88px}
 .settings-row-text strong{display:block;font-size:0.92rem}
 .settings-row-text span{font-size:0.78rem;color:var(--clr-text-secondary)}
 .settings-row-arrow{color:var(--clr-text-secondary);flex-shrink:0}
+.settings-section-label{
+  font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--clr-text-secondary);margin:1.5rem 0 0.6rem;
+}
+.settings-section-label:first-child{margin-top:0}
+.logout-row{color:var(--clr-danger)}
+.logout-row .settings-row-icon{background:#FEE2E2;color:var(--clr-danger)}
 
 /* ============================================================
    KYC
