@@ -4,134 +4,155 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deposit – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 <div id="header-container"></div>
 
-<div class="section" style="max-width:600px; margin:auto;">
-  <h2>Deposit Funds</h2>
-  <p>Transfer the exact amount to the bank details below, then upload proof.</p>
-
-  <div class="card mb-2" style="background:#fef9c3;">
-    <strong>Bank Name: </strong>Access Bank<br>
-    <strong>Account Number: </strong>1234567890<br>
-    <strong>Account Name: </strong>DTL Stocks Ltd
+<div class="section dashboard-page" style="max-width:520px;">
+  <div class="page-header">
+    <h2>Deposit Funds</h2>
+    <p class="text-muted" style="margin-bottom:0;">Transfer to the account below, then upload your proof.</p>
   </div>
 
-  <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
+  <div class="referral-hero mb-2">
+    <span class="referral-hero-label">Bank Details</span>
+    <div class="referral-code-row">
+      <span id="bank-account-number" style="font-size:1.2rem;">1234567890</span>
+      <button class="hero-btn hero-btn-solid" id="copy-account-btn" style="padding:0.5rem 1rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="referral-link-row" style="white-space:normal;">
+      DTL Stocks Bank &middot; Access Bank &middot; Account Name: DTL Stocks Ltd
+    </div>
+  </div>
 
-  <form id="deposit-form">
+  <form id="deposit-form" class="card">
     <div class="form-group">
       <label class="form-label">Amount (₦)</label>
       <input type="number" id="amount" class="form-input" required min="1000">
     </div>
     <div class="form-group">
       <label class="form-label">Payment Method</label>
-      <select id="method" class="form-select"><option>Bank Transfer</option><option>USDT</option></select>
+      <select id="method" class="form-select">
+        <option>Bank Transfer</option>
+        <option>USDT</option>
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Proof Screenshot</label>
-      <input type="file" id="proof-file" accept="image/*" required>
+      <label class="upload-tile" id="upload-tile">
+        <input type="file" id="proof-file" accept="image/*" required>
+        <span class="upload-tile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+        </span>
+        <span class="upload-tile-text" id="upload-tile-text">Tap to upload payment proof</span>
+        <div class="upload-tile-hint">Full screenshot of the transfer receipt</div>
+      </label>
     </div>
-    <button type="submit" class="btn btn-primary btn-block" id="deposit-submit-btn">Submit Deposit</button>
+    <button type="submit" id="deposit-submit-btn" class="btn btn-primary btn-block">Submit Deposit</button>
   </form>
 
-  <h3 class="mt-3">Recent Deposits</h3>
-  <div id="deposits-list">Loading…</div>
+  <h3 class="mt-3 mb-2">Recent Deposits</h3>
+  <div id="pending-deposits"><div class="card">Loading…</div></div>
 </div>
 
 <div id="footer-container"></div>
 <script src="/assets/js/components.js"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const supabase = createClient(
-  'https://jytmnukzvxirnafukbck.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
-);
+const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
 
 // Required so the shared header (assets/js/components.js) can detect
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
-async function checkAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) window.location.href = 'login.html';
-  return user;
+document.getElementById('copy-account-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(document.getElementById('bank-account-number').textContent.trim());
+  alert('Account number copied!');
+});
+
+document.getElementById('proof-file').addEventListener('change', (e) => {
+  const tile = document.getElementById('upload-tile');
+  const text = document.getElementById('upload-tile-text');
+  if (e.target.files[0]) {
+    tile.classList.add('has-file');
+    text.textContent = e.target.files[0].name;
+  }
+});
+
+function extOf(file) {
+  const parts = file.name.split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg' : 'jpg';
 }
 
-function showError(msg) {
-  const el = document.getElementById('error-alert');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-function clearError() {
-  const el = document.getElementById('error-alert');
-  el.style.display = 'none';
-}
-
-async function uploadFile(file) {
-  const fileName = `${Date.now()}_${file.name}`;
-  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file);
+async function uploadProof(user, file) {
+  // Bucket is PRIVATE — path is scoped to the user's own folder so the
+  // storage RLS policy can enforce ownership, same as KYC.
+  const path = `${user.id}/proof_${Date.now()}.${extOf(file)}`;
+  const { error } = await supabase.storage.from('proofs').upload(path, file);
   if (error) throw error;
-  const { data: { publicUrl } } = supabase.storage.from('proofs').getPublicUrl(data.path);
-  return publicUrl;
-}
-
-function statusBadge(status) {
-  const map = { approved: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
-  return `<span class="badge ${map[status] || ''}">${status}</span>`;
-}
-
-async function loadDeposits(user) {
-  const { data } = await supabase
-    .from('deposits')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10);
-  document.getElementById('deposits-list').innerHTML = data?.map(d => `
-    <div class="txn-row">
-      <span class="currency-ngn">${d.amount.toLocaleString()}</span>
-      ${statusBadge(d.status)}
-      <span class="text-muted" style="font-size:0.8rem;">${new Date(d.created_at).toLocaleDateString()}</span>
-    </div>`).join('') || '<p class="text-muted">No deposits yet.</p>';
+  return path; // store the path, not a public URL
 }
 
 document.getElementById('deposit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  clearError();
-
-  const user = await checkAuth();
-  if (!user) return;
+  const submitBtn = document.getElementById('deposit-submit-btn');
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return (window.location.href = 'login.html');
 
   const amount = +document.getElementById('amount').value;
   const method = document.getElementById('method').value;
   const file = document.getElementById('proof-file').files[0];
-  if (!file) return showError('Please upload your proof of payment.');
-  if (!amount || amount < 1000) return showError('Minimum deposit is ₦1,000.');
+  if (!file) return alert('Please upload your proof of payment.');
 
-  const btn = document.getElementById('deposit-submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Submitting…';
-
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
   try {
-    const proofUrl = await uploadFile(file);
+    const proofPath = await uploadProof(user, file);
     const { error } = await supabase.from('deposits').insert({
-      user_id: user.id, amount, payment_method: method, proof_image_url: proofUrl
+      user_id: user.id, amount, payment_method: method, proof_image_url: proofPath
     });
-    if (error) { showError(error.message); return; }
+    if (error) throw error;
     alert('Deposit submitted for approval!');
     location.reload();
   } catch (err) {
-    showError(err.message);
+    alert(err.message);
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Submit Deposit';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Deposit';
   }
 });
 
-checkAuth().then(user => { if (user) loadDeposits(user); });
+const STATUS_BADGE = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger' };
+
+async function loadPending() {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+  const { data } = await supabase.from('deposits').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+  const container = document.getElementById('pending-deposits');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card text-muted">No deposits yet.</div>';
+    return;
+  }
+  container.innerHTML = `<div class="card">${data.map(d => `
+    <div class="txn-row">
+      <span class="txn-icon" style="background:#DDF7EA;color:var(--clr-green-deep);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+      </span>
+      <div class="txn-body">
+        <div class="txn-title">₦${d.amount.toLocaleString()}</div>
+        <div class="txn-date">${new Date(d.created_at).toLocaleDateString()} · ${d.payment_method || ''}</div>
+      </div>
+      <span class="badge ${STATUS_BADGE[d.status] || ''}">${d.status}</span>
+    </div>
+  `).join('')}</div>`;
+}
+loadPending();
 </script>
 </body>
 </html>
