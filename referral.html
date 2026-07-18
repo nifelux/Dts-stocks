@@ -3,27 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Referral – DTL Stocks</title>
+<title>My Team – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 <div id="header-container"></div>
 
-<div class="section" style="max-width:600px; margin:auto;">
-<h2>Referral Program</h2>
-<div class="card mb-2">
-<p>Your Referral Link:</p>
-<input type="text" id="ref-link" class="form-input" readonly>
-<button class="btn btn-primary btn-sm mt-1" id="copy-link-btn">Copy</button>
-</div>
-<div class="card mb-2">
-<h3>Your Referrals</h3>
-<div id="direct-referrals"></div>
-</div>
-<div class="card">
-<h3>Referral Rewards</h3>
-<div id="referral-rewards"></div>
-</div>
+<div class="section dashboard-page">
+  <div class="page-header">
+    <h2>My Team</h2>
+    <p class="text-muted" style="margin-bottom:0;">Invite friends and earn commission on their deposits.</p>
+  </div>
+
+  <div class="referral-hero">
+    <span class="referral-hero-label">Your Referral Code</span>
+    <div class="referral-code-row">
+      <span id="ref-code">••••••••</span>
+      <button class="hero-btn hero-btn-solid" id="copy-code-btn" style="padding:0.5rem 1rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="referral-link-row" id="ref-link">Loading link…</div>
+
+    <div class="vip-strip" id="vip-strip"></div>
+  </div>
+
+  <div class="stat-row-3">
+    <div class="stat-tile"><div class="value" id="total-team">0</div><div class="label">Total Team</div></div>
+    <div class="stat-tile"><div class="value" id="active-team">0</div><div class="label">Active</div></div>
+    <div class="stat-tile"><div class="value" id="total-earned">₦0</div><div class="label">Earned</div></div>
+  </div>
+
+  <div class="card mt-3">
+    <h3 class="mb-2">Your Referrals</h3>
+    <div id="direct-referrals">Loading…</div>
+  </div>
+
+  <div class="card mt-2">
+    <h3 class="mb-2">Referral Rewards</h3>
+    <div id="referral-rewards">Loading…</div>
+  </div>
 </div>
 
 <div id="footer-container"></div>
@@ -36,29 +58,69 @@ const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhb
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
+function initials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
+}
+
+function renderVipStrip(currentLevel) {
+  const levels = ['bronze', 'silver', 'gold', 'platinum'];
+  document.getElementById('vip-strip').innerHTML = levels.map(l =>
+    `<span class="vip-chip ${l === currentLevel ? 'is-active' : ''}">${l}</span>`
+  ).join('');
+}
+
 async function loadReferral() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  const { data: profile } = await supabase.from('profiles').select('referral_code').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('referral_code, vip_level').eq('id', user.id).single();
+  document.getElementById('ref-code').textContent = profile.referral_code;
+  renderVipStrip(profile?.vip_level || 'bronze');
+
   const link = `${window.location.origin}/register.html?ref=${profile.referral_code}`;
-  document.getElementById('ref-link').value = link;
+  document.getElementById('ref-link').textContent = link;
+
+  document.getElementById('copy-code-btn').addEventListener('click', () => {
+    navigator.clipboard.writeText(profile.referral_code);
+    alert('Referral code copied!');
+  });
 
   const { data: direct } = await supabase.from('profiles').select('full_name, email, created_at').eq('referred_by', user.id);
-  document.getElementById('direct-referrals').innerHTML = direct?.map(d => `<p>${d.full_name || d.email} (joined ${new Date(d.created_at).toLocaleDateString()})</p>`).join('') || 'None';
+  document.getElementById('total-team').textContent = direct?.length || 0;
+  document.getElementById('active-team').textContent = direct?.length || 0;
+
+  document.getElementById('direct-referrals').innerHTML = direct?.length
+    ? direct.map(d => `
+        <div class="team-row">
+          <span class="team-avatar">${initials(d.full_name || d.email)}</span>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:0.9rem;">${d.full_name || d.email}</div>
+            <div class="text-muted" style="font-size:0.78rem;">Joined ${new Date(d.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>`).join('')
+    : '<p class="text-muted">No referrals yet — share your link to start earning.</p>';
 
   const { data: rewards } = await supabase.from('referral_rewards').select('*').eq('referrer_id', user.id);
-  document.getElementById('referral-rewards').innerHTML = rewards?.map(r => `<p>₦${r.reward_amount.toLocaleString()} – Level ${r.level} (${r.transaction_type})</p>`).join('') || 'No rewards yet';
+  const totalEarned = rewards?.reduce((sum, r) => sum + r.reward_amount, 0) || 0;
+  document.getElementById('total-earned').textContent = '₦' + totalEarned.toLocaleString();
+
+  document.getElementById('referral-rewards').innerHTML = rewards?.length
+    ? rewards.map(r => `
+        <div class="txn-row">
+          <span class="txn-icon" style="background:#DDF7EA;color:var(--clr-green-deep);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+          <div class="txn-body">
+            <div class="txn-title">Level ${r.level} · ${r.transaction_type}</div>
+          </div>
+          <div class="txn-amount is-in">+₦${r.reward_amount.toLocaleString()}</div>
+        </div>`).join('')
+    : '<p class="text-muted">No rewards yet.</p>';
 }
 
 loadReferral();
-
-document.getElementById('copy-link-btn').addEventListener('click', () => {
-  const inp = document.getElementById('ref-link');
-  inp.select();
-  document.execCommand('copy');
-  alert('Link copied!');
-});
 </script>
 </body>
 </html>
