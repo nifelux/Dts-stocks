@@ -4,58 +4,102 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Transaction History – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<style>
+.filter-tabs{display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.25rem;margin-bottom:1.25rem;}
+.filter-tab{
+  flex-shrink:0;padding:0.5rem 1rem;border-radius:999px;font-size:0.85rem;font-weight:600;
+  border:1px solid var(--clr-border);background:var(--clr-card);color:var(--clr-text-secondary);
+  cursor:pointer;transition:background var(--transition),color var(--transition),border-color var(--transition);
+}
+.filter-tab.is-active{background:var(--clr-purple-ink);border-color:var(--clr-purple-ink);color:#fff;}
+</style>
 </head>
 <body>
 <div id="header-container"></div>
 
-<div class="section">
-  <h2>Transaction History</h2>
-  <table id="txn-table"><thead><tr><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody></tbody></table>
+<div class="section dashboard-page">
+  <div class="page-header">
+    <h2>Transaction History</h2>
+    <p class="text-muted" style="margin-bottom:0;">Every deposit, withdrawal, and earning in one place.</p>
+  </div>
+
+  <div class="filter-tabs" id="filter-tabs">
+    <button class="filter-tab is-active" data-filter="all">All</button>
+    <button class="filter-tab" data-filter="deposit">Deposits</button>
+    <button class="filter-tab" data-filter="withdrawal">Withdrawals</button>
+    <button class="filter-tab" data-filter="earning">Earnings</button>
+    <button class="filter-tab" data-filter="referral">Referrals</button>
+    <button class="filter-tab" data-filter="gift">Gifts</button>
+    <button class="filter-tab" data-filter="investment">Investments</button>
+  </div>
+
+  <div id="txn-list"><div class="card">Loading…</div></div>
 </div>
 
 <div id="footer-container"></div>
 <script src="/assets/js/components.js"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const supabase = createClient(
-  'https://jytmnukzvxirnafukbck.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
-);
+const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
 
 // Required so the shared header (assets/js/components.js) can detect
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
-async function checkAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) window.location.href = 'login.html';
-  return user;
+const TXN_ICONS = {
+  deposit:      { tone: '#DDF7EA', fg: 'var(--clr-green-deep)', in: true,  svg: '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/>' },
+  earning:      { tone: '#DDF7EA', fg: 'var(--clr-green-deep)', in: true,  svg: '<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>' },
+  referral:     { tone: '#EDE7FF', fg: 'var(--clr-purple-deep)', in: true,  svg: '<circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>' },
+  gift:         { tone: '#FFF3D6', fg: 'var(--clr-yellow-deep)', in: true,  svg: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>' },
+  admin_credit: { tone: '#DDF7EA', fg: 'var(--clr-green-deep)', in: true,  svg: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
+  withdrawal:   { tone: '#EFEDF5', fg: 'var(--clr-purple-ink)', in: false, svg: '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>' },
+  admin_debit:  { tone: '#EFEDF5', fg: 'var(--clr-purple-ink)', in: false, svg: '<line x1="5" y1="12" x2="19" y2="12"/>' },
+  investment:   { tone: '#EDE7FF', fg: 'var(--clr-purple-deep)', in: false, svg: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>' }
+};
+
+let allTxns = [];
+
+function renderList(filter) {
+  const filtered = filter === 'all' ? allTxns : allTxns.filter(t => t.type === filter);
+  const list = document.getElementById('txn-list');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="card text-muted">No transactions here yet.</div>';
+    return;
+  }
+  list.innerHTML = `<div class="card">${filtered.map(t => {
+    const cfg = TXN_ICONS[t.type] || TXN_ICONS.deposit;
+    return `
+    <div class="txn-row">
+      <span class="txn-icon" style="background:${cfg.tone};color:${cfg.fg};">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${cfg.svg}</svg>
+      </span>
+      <div class="txn-body">
+        <div class="txn-title">${t.type.replace('_', ' ')}</div>
+        <div class="txn-date">${new Date(t.created_at).toLocaleDateString()} &middot; ${t.status}</div>
+      </div>
+      <div class="txn-amount ${cfg.in ? 'is-in' : 'is-out'}">${cfg.in ? '+' : '-'}₦${t.amount.toLocaleString()}</div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
-function statusBadge(status) {
-  const map = { approved: 'badge-success', completed: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
-  return `<span class="badge ${map[status] || ''}">${status}</span>`;
-}
+document.getElementById('filter-tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.filter-tab');
+  if (!btn) return;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  renderList(btn.dataset.filter);
+});
 
-async function loadHistory(user) {
-  const { data } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  document.querySelector('#txn-table tbody').innerHTML = data?.map(t => `
-    <tr>
-      <td>${t.type}</td>
-      <td class="currency-ngn">${t.amount.toLocaleString()}</td>
-      <td>${statusBadge(t.status)}</td>
-      <td>${new Date(t.created_at).toLocaleDateString()}</td>
-    </tr>`).join('') || '<tr><td colspan="4" class="text-muted">No transactions yet.</td></tr>';
-}
-
-checkAuth().then(user => { if (user) loadHistory(user); });
+(async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+  const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200);
+  allTxns = data || [];
+  renderList('all');
+})();
 </script>
 </body>
 </html>
