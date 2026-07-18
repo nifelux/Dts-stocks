@@ -3,17 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Investments – DTL Stocks</title>
+<title>Investment Products – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 <div id="header-container"></div>
 
-<div class="section">
-<h2>Investment Products</h2>
-<div class="grid-3" id="products-list"></div>
-<h2 class="mt-3">My Investments</h2>
-<div id="my-investments"></div>
+<div class="section dashboard-page">
+  <div class="page-header">
+    <h2>Investment Products</h2>
+    <p class="text-muted" style="margin-bottom:0;">Choose a plan that fits your goals.</p>
+  </div>
+
+  <div class="product-grid" id="products-list">
+    <div class="card">Loading…</div>
+  </div>
+
+  <div class="page-header mt-3">
+    <h2>My Investments</h2>
+  </div>
+  <div id="my-investments"><div class="card">Loading…</div></div>
 </div>
 
 <div id="footer-container"></div>
@@ -26,24 +37,34 @@ const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhb
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
+const PRODUCT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>';
+
 async function loadProducts() {
   const { data } = await supabase.from('products').select('*').eq('is_locked', false);
-  document.getElementById('products-list').innerHTML = data?.map(p => `
-    <div class="card">
-      <h3>${p.name}</h3><p>${p.description||''}</p>
-      <p>Daily ROI: ${p.daily_roi_percent}% | ${p.duration_days} days</p>
-      <p>Min: ₦${p.min_invest.toLocaleString()}</p>
-      <button class="btn btn-primary btn-sm invest-btn" data-id="${p.id}">Invest</button>
+  const list = document.getElementById('products-list');
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="card">No products available yet.</div>';
+    return;
+  }
+  list.innerHTML = data.map(p => `
+    <div class="product-card">
+      <span class="product-icon">${PRODUCT_ICON}</span>
+      <h3>${p.name}</h3>
+      <p class="text-muted">${p.description || ''}</p>
+      <div class="product-stats">
+        <span class="product-stat roi">+${p.daily_roi_percent}% / day</span>
+        <span class="product-stat duration">${p.duration_days} days</span>
+        <span class="product-stat min">Min ₦${p.min_invest.toLocaleString()}</span>
+      </div>
+      <button class="btn btn-primary btn-block invest-btn" data-id="${p.id}">Invest Now</button>
     </div>
-  `).join('') || 'No products';
+  `).join('');
 
   document.querySelectorAll('.invest-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const productId = btn.dataset.id;
       const amount = prompt('Enter amount to invest (₦):');
-      if (amount && +amount > 0) {
-        invest(productId, +amount);
-      }
+      if (amount && +amount > 0) invest(productId, +amount);
     });
   });
 }
@@ -64,13 +85,23 @@ async function invest(productId, amount) {
 async function loadMyInvestments() {
   const user = (await supabase.auth.getUser()).data.user;
   const { data } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).order('created_at', { ascending: false });
-  document.getElementById('my-investments').innerHTML = data?.map(i => `
-    <div class="card mb-1">
-      <strong>${i.products?.name}</strong> – ₦${i.amount.toLocaleString()}
-      <span class="badge badge-${i.status === 'active' ? 'success' : 'default'}">${i.status}</span>
-      <p>Daily: ₦${i.daily_income.toLocaleString()} | Earned: ₦${i.total_income.toLocaleString()} | Day ${i.days_elapsed}/${i.duration_days}</p>
-    </div>
-  `).join('') || 'No investments';
+  const container = document.getElementById('my-investments');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card">No investments yet — pick a product above to get started.</div>';
+    return;
+  }
+  container.innerHTML = `<div class="card">${data.map(i => {
+    const pct = Math.min(100, Math.round((i.days_elapsed / i.duration_days) * 100));
+    return `
+      <div class="mb-2">
+        <div class="flex items-center" style="justify-content:space-between;">
+          <strong>${i.products?.name || 'Investment'}</strong>
+          <span class="badge badge-${i.status === 'active' ? 'success' : ''}">${i.status.toUpperCase()}</span>
+        </div>
+        <div class="text-muted" style="font-size:0.82rem;">₦${i.amount.toLocaleString()} · Day ${i.days_elapsed}/${i.duration_days} · +₦${i.total_income.toLocaleString()} earned</div>
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join('')}</div>`;
 }
 
 loadProducts();
