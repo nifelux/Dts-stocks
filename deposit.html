@@ -3,275 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Add money · DTL Stocks</title>
+<title>Deposit – DTL Stocks</title>
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+<div id="header-container"></div>
 
-<!-- ============ HEADER ============ -->
-<header class="floating-header">
-  <div class="header-container">
-    <a href="dashboard.html" class="brand">
-      <span class="brand-mark">DT</span>
-      <span class="brand-name">DTL<span class="accent">Stocks</span></span>
-    </a>
+<div class="section" style="max-width:600px; margin:auto;">
+  <h2>Deposit Funds</h2>
+  <p>Transfer the exact amount to the bank details below, then upload proof.</p>
 
-    <nav class="nav-links">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="investments.html" class="nav-link">Investments</a>
-      <a href="deposit.html" class="nav-link" style="background:var(--clr-surface);color:var(--clr-primary-hover)">Deposit</a>
-      <a href="withdraw.html" class="nav-link">Withdraw</a>
-      <a href="transaction-history.html" class="nav-link">History</a>
-      <div class="nav-dropdown" id="accountDropdown">
-        <button class="nav-link dropdown-toggle" onclick="toggleDropdown('accountDropdown')">
-          <span class="avatar-circle">JC</span>
-          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="dropdown-menu dropdown-menu-right">
-          <a href="profile.html">Profile</a>
-          <a href="kyc.html">Verification</a>
-          <a href="referral.html">Referrals</a>
-          <a href="settings.html">Settings</a>
-          <a href="support.html">Support</a>
-          <a href="login.html">Log out</a>
-        </div>
-      </div>
-    </nav>
-
-    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()" aria-label="Menu">
-      <span class="hamburger"><span></span><span></span><span></span></span>
-    </button>
-  </div>
-</header>
-
-<!-- ============ MOBILE DRAWER ============ -->
-<div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
-<aside class="mobile-menu" id="mobileMenu">
-  <div class="mobile-menu-header">
-    Menu
-    <button class="mobile-close" onclick="toggleMobileMenu()">&times;</button>
-  </div>
-  <div class="mobile-menu-content">
-    <div class="mobile-user-card">
-      <span class="avatar-circle avatar-circle-lg">JC</span>
-      <div class="mobile-user-name">Joy Chukwu</div>
-    </div>
-    <a href="dashboard.html" class="mobile-link">Dashboard</a>
-    <a href="investments.html" class="mobile-link">Investments</a>
-    <a href="deposit.html" class="mobile-link">Deposit</a>
-    <a href="withdraw.html" class="mobile-link">Withdraw</a>
-    <a href="transaction-history.html" class="mobile-link">History</a>
-    <a href="referral.html" class="mobile-link">Referrals</a>
-    <a href="kyc.html" class="mobile-link">Verification</a>
-    <a href="support.html" class="mobile-link">Support</a>
-  </div>
-  <div class="mobile-menu-footer">
-    <a href="settings.html" class="btn btn-outline btn-block">Settings</a>
-    <a href="login.html" class="btn btn-block" style="color:var(--clr-danger)">Log out</a>
-  </div>
-</aside>
-
-<!-- ============ PAGE ============ -->
-<main class="money-page">
-  <div class="back-row">
-    <a href="dashboard.html" class="back-btn" aria-label="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </a>
-    <h2>Add money</h2>
+  <div class="card mb-2" style="background:#fef9c3;">
+    <strong>Bank Name: </strong>Access Bank<br>
+    <strong>Account Number: </strong>1234567890<br>
+    <strong>Account Name: </strong>DTL Stocks Ltd
   </div>
 
-  <!-- Bank transfer instructions -->
-  <div class="detail-card">
-    <div class="detail-row">
-      <span class="detail-row-label">Bank name</span>
-      <span class="detail-row-value">Zenith Bank</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-row-label">Account number</span>
-      <div style="text-align:right">
-        <div class="detail-row-value">1234567890</div>
-        <button class="copy-btn" id="copyAcctBtn" onclick="copyAccount()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          <span id="copyAcctLabel">Copy number</span>
-        </button>
-      </div>
-    </div>
-    <div class="detail-row">
-      <span class="detail-row-label">Account name</span>
-      <span class="detail-row-value">DTL Stocks Ltd</span>
-    </div>
-  </div>
+  <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
 
-  <div class="alert alert-info">
-    Transfer the exact amount from your own bank account, then submit the form below with your proof of payment. Deposits are usually confirmed within 30 minutes during business hours.
-  </div>
-
-  <!-- Deposit form -->
-  <form class="card" onsubmit="return submitDeposit(event)">
+  <form id="deposit-form">
     <div class="form-group">
-      <label class="form-label" for="depositAmount">Amount sent</label>
-      <div class="amount-field">
-        <span class="ngn-prefix">₦</span>
-        <input type="number" id="depositAmount" class="form-input" placeholder="0.00" min="1000" step="0.01" required>
-      </div>
-      <div class="quick-amounts">
-        <button type="button" class="quick-amount" onclick="setAmount(5000,this)">₦5,000</button>
-        <button type="button" class="quick-amount" onclick="setAmount(10000,this)">₦10,000</button>
-        <button type="button" class="quick-amount" onclick="setAmount(50000,this)">₦50,000</button>
-        <button type="button" class="quick-amount" onclick="setAmount(100000,this)">₦100,000</button>
-      </div>
+      <label class="form-label">Amount (₦)</label>
+      <input type="number" id="amount" class="form-input" required min="1000">
     </div>
-
     <div class="form-group">
-      <label class="form-label" for="depositRef">Reference / sender name <span class="text-muted" style="font-weight:400">(optional)</span></label>
-      <input type="text" id="depositRef" class="form-input" placeholder="Helps us match your transfer faster">
+      <label class="form-label">Payment Method</label>
+      <select id="method" class="form-select"><option>Bank Transfer</option><option>USDT</option></select>
     </div>
-
     <div class="form-group">
-      <label class="form-label">Proof of payment</label>
-      <label class="upload-tile" id="uploadTile">
-        <input type="file" id="proofFile" accept="image/*" onchange="handleFile(this)">
-        <div class="upload-tile-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17h8a4 4 0 0 0 .3-8 5 5 0 0 0-9.8-1.5A4.5 4.5 0 0 0 5 15.5"/><path d="M12 12v9"/><polyline points="9 15 12 12 15 15"/></svg>
-        </div>
-        <div class="upload-tile-text" id="uploadText">Tap to upload a screenshot or photo</div>
-        <div class="upload-tile-hint">JPG or PNG, up to 5MB</div>
-      </label>
+      <label class="form-label">Proof Screenshot</label>
+      <input type="file" id="proof-file" accept="image/*" required>
     </div>
-
-    <button type="submit" class="btn btn-primary btn-block btn-lg">Submit deposit</button>
-    <p class="text-muted" style="text-align:center;font-size:0.78rem;margin-top:0.75rem;margin-bottom:0">Your balance updates once an admin confirms the transfer.</p>
+    <button type="submit" class="btn btn-primary btn-block" id="deposit-submit-btn">Submit Deposit</button>
   </form>
 
-  <!-- Recent deposits -->
-  <div class="card mt-3">
-    <div class="card-header flex items-center" style="justify-content:space-between">
-      <h4 style="margin:0">Recent deposits</h4>
-      <a href="transaction-history.html" style="font-size:0.82rem;font-weight:600;color:var(--clr-purple-deep);text-decoration:none">See all</a>
-    </div>
+  <h3 class="mt-3">Recent Deposits</h3>
+  <div id="deposits-list">Loading…</div>
+</div>
 
-    <div class="txn-row">
-      <div class="txn-icon tone-green">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Bank transfer</div>
-        <div class="txn-date">Jul 16, 2026 · 9:42 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦50,000.00</div>
-        <span class="badge badge-success">Approved</span>
-      </div>
-    </div>
+<div id="footer-container"></div>
+<script src="/assets/js/components.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient(
+  'https://jytmnukzvxirnafukbck.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
+);
 
-    <div class="txn-row">
-      <div class="txn-icon tone-green">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Bank transfer</div>
-        <div class="txn-date">Jul 12, 2026 · 4:10 PM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦20,000.00</div>
-        <span class="badge badge-warning">Pending</span>
-      </div>
-    </div>
+// Required so the shared header (assets/js/components.js) can detect
+// the logged-in session — without this it always shows the guest menu.
+window.supabase = supabase;
 
-    <div class="txn-row">
-      <div class="txn-icon tone-green">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-      </div>
-      <div class="txn-body">
-        <div class="txn-title">Bank transfer</div>
-        <div class="txn-date">Jul 3, 2026 · 11:05 AM</div>
-      </div>
-      <div style="text-align:right">
-        <div class="txn-amount is-in">+₦10,000.00</div>
-        <span class="badge badge-danger">Rejected</span>
-      </div>
-    </div>
-  </div>
-</main>
-
-<!-- ============ BOTTOM TAB BAR ============ -->
-<nav class="tab-bar">
-  <a href="dashboard.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>
-    <span class="tab-label">Home</span>
-  </a>
-  <a href="investments.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-    <span class="tab-label">Invest</span>
-  </a>
-  <a href="deposit.html" class="tab-item is-active">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
-    <span class="tab-label">Wallet</span>
-  </a>
-  <a href="referral.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-    <span class="tab-label">Team</span>
-  </a>
-  <a href="profile.html" class="tab-item">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-    <span class="tab-label">Profile</span>
-  </a>
-</nav>
-
-<script>
-function toggleMobileMenu(){
-  document.getElementById('mobileMenu').classList.toggle('active');
-  document.getElementById('mobileOverlay').classList.toggle('active');
-  document.getElementById('mobileToggle').classList.toggle('active');
+async function checkAuth() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) window.location.href = 'login.html';
+  return user;
 }
-function toggleDropdown(id){
-  document.getElementById(id).classList.toggle('open');
+
+function showError(msg) {
+  const el = document.getElementById('error-alert');
+  el.textContent = msg;
+  el.style.display = 'block';
 }
-document.addEventListener('click', function(e){
-  var dd = document.getElementById('accountDropdown');
-  if(dd && !dd.contains(e.target)) dd.classList.remove('open');
+function clearError() {
+  const el = document.getElementById('error-alert');
+  el.style.display = 'none';
+}
+
+async function uploadFile(file) {
+  const fileName = `${Date.now()}_${file.name}`;
+  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file);
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from('proofs').getPublicUrl(data.path);
+  return publicUrl;
+}
+
+function statusBadge(status) {
+  const map = { approved: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
+  return `<span class="badge ${map[status] || ''}">${status}</span>`;
+}
+
+async function loadDeposits(user) {
+  const { data } = await supabase
+    .from('deposits')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  document.getElementById('deposits-list').innerHTML = data?.map(d => `
+    <div class="txn-row">
+      <span class="currency-ngn">${d.amount.toLocaleString()}</span>
+      ${statusBadge(d.status)}
+      <span class="text-muted" style="font-size:0.8rem;">${new Date(d.created_at).toLocaleDateString()}</span>
+    </div>`).join('') || '<p class="text-muted">No deposits yet.</p>';
+}
+
+document.getElementById('deposit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+
+  const user = await checkAuth();
+  if (!user) return;
+
+  const amount = +document.getElementById('amount').value;
+  const method = document.getElementById('method').value;
+  const file = document.getElementById('proof-file').files[0];
+  if (!file) return showError('Please upload your proof of payment.');
+  if (!amount || amount < 1000) return showError('Minimum deposit is ₦1,000.');
+
+  const btn = document.getElementById('deposit-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const proofUrl = await uploadFile(file);
+    const { error } = await supabase.from('deposits').insert({
+      user_id: user.id, amount, payment_method: method, proof_image_url: proofUrl
+    });
+    if (error) { showError(error.message); return; }
+    alert('Deposit submitted for approval!');
+    location.reload();
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit Deposit';
+  }
 });
 
-function setAmount(val, btn){
-  document.getElementById('depositAmount').value = val;
-  document.querySelectorAll('.quick-amount').forEach(function(b){ b.classList.remove('is-active'); });
-  btn.classList.add('is-active');
-}
-
-function handleFile(input){
-  var tile = document.getElementById('uploadTile');
-  var text = document.getElementById('uploadText');
-  if(input.files && input.files[0]){
-    tile.classList.add('has-file');
-    text.textContent = input.files[0].name;
-  } else {
-    tile.classList.remove('has-file');
-    text.textContent = 'Tap to upload a screenshot or photo';
-  }
-}
-
-function copyAccount(){
-  var btn = document.getElementById('copyAcctBtn');
-  var label = document.getElementById('copyAcctLabel');
-  navigator.clipboard.writeText('1234567890').then(function(){
-    btn.classList.add('is-copied');
-    label.textContent = 'Copied';
-    setTimeout(function(){ btn.classList.remove('is-copied'); label.textContent = 'Copy number'; }, 2000);
-  });
-}
-
-function submitDeposit(e){
-  e.preventDefault();
-  var amount = document.getElementById('depositAmount').value;
-  var file = document.getElementById('proofFile').files[0];
-  if(!amount || amount <= 0){ alert('Enter the amount you sent.'); return false; }
-  if(!file){ alert('Upload your proof of payment to continue.'); return false; }
-  alert('Deposit submitted for review. We will confirm once it is verified.');
-  return false;
-}
+checkAuth().then(user => { if (user) loadDeposits(user); });
 </script>
 </body>
-                                                                                                                                     </html>
-  
+</html>
