@@ -147,12 +147,22 @@
       }
     });
 
+    function withdrawalStatusLabel(w) {
+      if (w.status === 'approved') {
+        if (w.payout_status === 'success') return '<span class="badge badge-success">Paid out</span>';
+        if (w.payout_status === 'processing') return '<span class="badge badge-warning">Sending…</span>';
+        if (w.payout_status === 'failed') return '<span class="badge badge-danger">Payout failed</span>';
+        return '<span class="badge badge-success">Approved</span>';
+      }
+      return statusBadge(w.status);
+    }
+
     async function loadHistory(user) {
       const { data } = await supabase.from('withdrawals').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       document.getElementById('history').innerHTML = data?.map(w => `
         <div class="txn-row">
           <span class="currency-ngn">${w.amount.toLocaleString()}</span>
-          ${statusBadge(w.status)}
+          ${withdrawalStatusLabel(w)}
           <span class="text-muted" style="font-size:0.8rem;">${new Date(w.created_at).toLocaleDateString()}</span>
         </div>`).join('') || '<p class="text-muted">No withdrawals yet.</p>';
     }
