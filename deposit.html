@@ -4,147 +4,116 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deposit – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 <div id="header-container"></div>
 
-<div class="section" style="max-width:600px; margin:auto;">
-  <h2>Deposit Funds</h2>
-  <p>Transfer the exact amount to the bank details below, then upload proof.</p>
-
-  <div class="card mb-2" style="background:#fef9c3;">
-    <strong>Bank Name: </strong>Access Bank<br>
-    <strong>Account Number: </strong>1234567890<br>
-    <strong>Account Name: </strong>DTL Stocks Ltd
+<div class="section dashboard-page" style="max-width:480px;">
+  <div class="page-header">
+    <h2>Deposit Funds</h2>
+    <p class="text-muted" style="margin-bottom:0;">Instant, automatic — your wallet is credited as soon as payment is confirmed.</p>
   </div>
 
   <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
 
-  <form id="deposit-form">
+  <form id="deposit-form" class="card">
     <div class="form-group">
       <label class="form-label">Amount (₦)</label>
-      <input type="number" id="amount" class="form-input" required min="1000">
+      <input type="number" id="amount" class="form-input" required min="1000" placeholder="Minimum ₦1,000">
     </div>
-    <div class="form-group">
-      <label class="form-label">Payment Method</label>
-      <select id="method" class="form-select"><option>Bank Transfer</option><option>USDT</option></select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Proof Screenshot</label>
-      <input type="file" id="proof-file" accept="image/*" required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-block" id="deposit-submit-btn">Submit Deposit</button>
+    <button type="submit" id="deposit-submit-btn" class="btn btn-primary btn-block">Pay Now</button>
   </form>
 
-  <h3 class="mt-3">Recent Deposits</h3>
-  <div id="deposits-list">Loading…</div>
+  <h3 class="mt-3 mb-2">Recent Deposits</h3>
+  <div id="pending-deposits"><div class="card">Loading…</div></div>
 </div>
 
 <div id="footer-container"></div>
 <script src="/assets/js/components.js"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const supabase = createClient(
-  'https://jytmnukzvxirnafukbck.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
-);
+const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
 
 // Required so the shared header (assets/js/components.js) can detect
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
-async function checkAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) window.location.href = 'login.html';
-  return user;
-}
-
 function showError(msg) {
-  const el = document.getElementById('error-alert');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-function clearError() {
-  const el = document.getElementById('error-alert');
-  el.style.display = 'none';
-}
-
-async function uploadFile(file) {
-  const fileName = `${Date.now()}_${file.name}`;
-  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file);
-  if (error) throw error;
-  const { data: { publicUrl } } = supabase.storage.from('proofs').getPublicUrl(data.path);
-  return publicUrl;
-}
-
-async function callFinanceApi(action, body) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(`/api/finance?action=${action}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session?.access_token}`,
-    },
-    body: JSON.stringify(body || {}),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Request failed');
-  return json;
-}
-
-function statusBadge(status) {
-  const map = { approved: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
-  return `<span class="badge ${map[status] || ''}">${status}</span>`;
-}
-
-async function loadDeposits() {
-  let data;
-  try {
-    data = await callFinanceApi('listDeposits');
-  } catch (err) {
-    document.getElementById('deposits-list').innerHTML = `<p class="text-muted">${err.message}</p>`;
-    return;
-  }
-  document.getElementById('deposits-list').innerHTML = data?.map(d => `
-    <div class="txn-row">
-      <span class="currency-ngn">${d.amount.toLocaleString()}</span>
-      ${statusBadge(d.status)}
-      <span class="text-muted" style="font-size:0.8rem;">${new Date(d.created_at).toLocaleDateString()}</span>
-    </div>`).join('') || '<p class="text-muted">No deposits yet.</p>';
+  const box = document.getElementById('error-alert');
+  box.textContent = msg;
+  box.style.display = 'block';
 }
 
 document.getElementById('deposit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  clearError();
+  document.getElementById('error-alert').style.display = 'none';
 
-  const user = await checkAuth();
-  if (!user) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return (window.location.href = 'login.html');
 
   const amount = +document.getElementById('amount').value;
-  const method = document.getElementById('method').value;
-  const file = document.getElementById('proof-file').files[0];
-  if (!file) return showError('Please upload your proof of payment.');
-  if (!amount || amount < 1000) return showError('Minimum deposit is ₦1,000.');
 
-  const btn = document.getElementById('deposit-submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Submitting…';
+  const submitBtn = document.getElementById('deposit-submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Redirecting to payment…';
 
   try {
-    const proofUrl = await uploadFile(file);
-    await callFinanceApi('createDeposit', { amount, payment_method: method, proof_image_url: proofUrl });
-    alert('Deposit submitted for approval!');
-    location.reload();
+    const res = await fetch('/api/webhook?action=initiateDeposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ amount })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showError(data.error || 'Could not start payment.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Pay Now';
+      return;
+    }
+    // Hand off to NekPayment's hosted payment page
+    window.location.href = data.payment_url;
   } catch (err) {
-    showError(err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Submit Deposit';
+    showError('Network error — please try again.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Pay Now';
   }
 });
 
-checkAuth().then(user => { if (user) loadDeposits(); });
+const STATUS_BADGE = { pending: 'badge-warning', success: 'badge-success', failed: 'badge-danger', processing: 'badge-warning' };
+
+async function loadRecentDeposits() {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+  const { data } = await supabase
+    .from('payment_orders')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('type', 'deposit')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const container = document.getElementById('pending-deposits');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card text-muted">No deposits yet.</div>';
+    return;
+  }
+  container.innerHTML = `<div class="card">${data.map(d => `
+    <div class="txn-row">
+      <span class="txn-icon" style="background:#DDF7EA;color:var(--clr-green-deep);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+      </span>
+      <div class="txn-body">
+        <div class="txn-title">₦${Number(d.amount).toLocaleString()}</div>
+        <div class="txn-date">${new Date(d.created_at).toLocaleDateString()}</div>
+      </div>
+      <span class="badge ${STATUS_BADGE[d.status] || ''}">${d.status}</span>
+    </div>
+  `).join('')}</div>`;
+}
+loadRecentDeposits();
 </script>
 </body>
 </html>
