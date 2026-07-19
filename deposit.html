@@ -11,50 +11,20 @@
 <body>
 <div id="header-container"></div>
 
-<div class="section dashboard-page" style="max-width:520px;">
+<div class="section dashboard-page" style="max-width:480px;">
   <div class="page-header">
     <h2>Deposit Funds</h2>
-    <p class="text-muted" style="margin-bottom:0;">Transfer to the account below, then upload your proof.</p>
+    <p class="text-muted" style="margin-bottom:0;">Instant, automatic — your wallet is credited as soon as payment is confirmed.</p>
   </div>
 
-  <div class="referral-hero mb-2">
-    <span class="referral-hero-label">Bank Details</span>
-    <div class="referral-code-row">
-      <span id="bank-account-number" style="font-size:1.2rem;">1234567890</span>
-      <button class="hero-btn hero-btn-solid" id="copy-account-btn" style="padding:0.5rem 1rem;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Copy
-      </button>
-    </div>
-    <div class="referral-link-row" style="white-space:normal;">
-      DTL Stocks Bank &middot; Access Bank &middot; Account Name: DTL Stocks Ltd
-    </div>
-  </div>
+  <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
 
   <form id="deposit-form" class="card">
     <div class="form-group">
       <label class="form-label">Amount (₦)</label>
-      <input type="number" id="amount" class="form-input" required min="1000">
+      <input type="number" id="amount" class="form-input" required min="1000" placeholder="Minimum ₦1,000">
     </div>
-    <div class="form-group">
-      <label class="form-label">Payment Method</label>
-      <select id="method" class="form-select">
-        <option>Bank Transfer</option>
-        <option>USDT</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Proof Screenshot</label>
-      <label class="upload-tile" id="upload-tile">
-        <input type="file" id="proof-file" accept="image/*" required>
-        <span class="upload-tile-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
-        </span>
-        <span class="upload-tile-text" id="upload-tile-text">Tap to upload payment proof</span>
-        <div class="upload-tile-hint">Full screenshot of the transfer receipt</div>
-      </label>
-    </div>
-    <button type="submit" id="deposit-submit-btn" class="btn btn-primary btn-block">Submit Deposit</button>
+    <button type="submit" id="deposit-submit-btn" class="btn btn-primary btn-block">Pay Now</button>
   </form>
 
   <h3 class="mt-3 mb-2">Recent Deposits</h3>
@@ -71,69 +41,60 @@ const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhb
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
-document.getElementById('copy-account-btn').addEventListener('click', () => {
-  navigator.clipboard.writeText(document.getElementById('bank-account-number').textContent.trim());
-  alert('Account number copied!');
-});
-
-document.getElementById('proof-file').addEventListener('change', (e) => {
-  const tile = document.getElementById('upload-tile');
-  const text = document.getElementById('upload-tile-text');
-  if (e.target.files[0]) {
-    tile.classList.add('has-file');
-    text.textContent = e.target.files[0].name;
-  }
-});
-
-function extOf(file) {
-  const parts = file.name.split('.');
-  return parts.length > 1 ? parts.pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg' : 'jpg';
-}
-
-async function uploadProof(user, file) {
-  // Bucket is PRIVATE — path is scoped to the user's own folder so the
-  // storage RLS policy can enforce ownership, same as KYC.
-  const path = `${user.id}/proof_${Date.now()}.${extOf(file)}`;
-  const { error } = await supabase.storage.from('proofs').upload(path, file);
-  if (error) throw error;
-  return path; // store the path, not a public URL
+function showError(msg) {
+  const box = document.getElementById('error-alert');
+  box.textContent = msg;
+  box.style.display = 'block';
 }
 
 document.getElementById('deposit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const submitBtn = document.getElementById('deposit-submit-btn');
-  const user = (await supabase.auth.getUser()).data.user;
-  if (!user) return (window.location.href = 'login.html');
+  document.getElementById('error-alert').style.display = 'none';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return (window.location.href = 'login.html');
 
   const amount = +document.getElementById('amount').value;
-  const method = document.getElementById('method').value;
-  const file = document.getElementById('proof-file').files[0];
-  if (!file) return alert('Please upload your proof of payment.');
 
+  const submitBtn = document.getElementById('deposit-submit-btn');
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting…';
+  submitBtn.textContent = 'Redirecting to payment…';
+
   try {
-    const proofPath = await uploadProof(user, file);
-    const { error } = await supabase.from('deposits').insert({
-      user_id: user.id, amount, payment_method: method, proof_image_url: proofPath
+    const res = await fetch('/api/nekpayment?action=initiateDeposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ amount })
     });
-    if (error) throw error;
-    alert('Deposit submitted for approval!');
-    location.reload();
+    const data = await res.json();
+    if (!res.ok) {
+      showError(data.error || 'Could not start payment.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Pay Now';
+      return;
+    }
+    // Hand off to NekPayment's hosted payment page
+    window.location.href = data.payment_url;
   } catch (err) {
-    alert(err.message);
-  } finally {
+    showError('Network error — please try again.');
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit Deposit';
+    submitBtn.textContent = 'Pay Now';
   }
 });
 
-const STATUS_BADGE = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger' };
+const STATUS_BADGE = { pending: 'badge-warning', success: 'badge-success', failed: 'badge-danger', processing: 'badge-warning' };
 
-async function loadPending() {
+async function loadRecentDeposits() {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) return;
-  const { data } = await supabase.from('deposits').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+  const { data } = await supabase
+    .from('payment_orders')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('type', 'deposit')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
   const container = document.getElementById('pending-deposits');
   if (!data || data.length === 0) {
     container.innerHTML = '<div class="card text-muted">No deposits yet.</div>';
@@ -145,14 +106,14 @@ async function loadPending() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
       </span>
       <div class="txn-body">
-        <div class="txn-title">₦${d.amount.toLocaleString()}</div>
-        <div class="txn-date">${new Date(d.created_at).toLocaleDateString()} · ${d.payment_method || ''}</div>
+        <div class="txn-title">₦${Number(d.amount).toLocaleString()}</div>
+        <div class="txn-date">${new Date(d.created_at).toLocaleDateString()}</div>
       </div>
       <span class="badge ${STATUS_BADGE[d.status] || ''}">${d.status}</span>
     </div>
   `).join('')}</div>`;
 }
-loadPending();
+loadRecentDeposits();
 </script>
 </body>
 </html>
