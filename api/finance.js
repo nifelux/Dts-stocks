@@ -13,23 +13,27 @@ export default async function handler(req, res) {
   const { action } = req.query;
   try {
     switch (action) {
-      case 'createDeposit': return createDeposit(req, res);
-      case 'listDeposits': return listDeposits(req, res);
-      case 'approveDeposit': return approveDeposit(req, res);
-      case 'rejectDeposit': return rejectDeposit(req, res);
-      case 'createWithdrawal': return createWithdrawal(req, res);
-      case 'listWithdrawals': return listWithdrawals(req, res);
-      case 'approveWithdrawal': return approveWithdrawal(req, res);
-      case 'rejectWithdrawal': return rejectWithdrawal(req, res);
-      case 'createWithdrawalProof': return createWithdrawalProof(req, res);
-      case 'listWithdrawalProofs': return listWithdrawalProofs(req, res);
-      case 'addProofComment': return addProofComment(req, res);
+      case 'createDeposit': return await createDeposit(req, res);
+      case 'listDeposits': return await listDeposits(req, res);
+      case 'approveDeposit': return await approveDeposit(req, res);
+      case 'rejectDeposit': return await rejectDeposit(req, res);
+      case 'createWithdrawal': return await createWithdrawal(req, res);
+      case 'listWithdrawals': return await listWithdrawals(req, res);
+      case 'approveWithdrawal': return await approveWithdrawal(req, res);
+      case 'rejectWithdrawal': return await rejectWithdrawal(req, res);
+      case 'createWithdrawalProof': return await createWithdrawalProof(req, res);
+      case 'listWithdrawalProofs': return await listWithdrawalProofs(req, res);
+      case 'addProofComment': return await addProofComment(req, res);
       default: return res.status(400).json({ error: 'Invalid action' });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+// ============================================================
+// DEPOSITS (Unchanged from original)
+// ============================================================
 
 async function createDeposit(req, res) {
   const user = await verifyUser(req);
@@ -90,39 +94,62 @@ async function rejectDeposit(req, res) {
   return res.status(200).json({ message: 'Deposit rejected' });
 }
 
+// ============================================================
+// WITHDRAWALS
+// ============================================================
+
 async function createWithdrawal(req, res) {
   const user = await verifyUser(req);
+
+  // 1. KYC Enforcement Check
   const { data: kycCheck } = await supabaseAdmin.from('profiles').select('kyc_status').eq('id', user.id).single();
   if (!kycCheck || kycCheck.kyc_status !== 'approved') {
     return res.status(400).json({ error: 'KYC verification required to withdraw. Please upload your face and full name on the KYC page.' });
   }
+
   const { amount, bank_code, bank_name, account_number, account_name } = req.body;
   try { withdrawSchema.parse(req.body); } catch (e) { return res.status(400).json({ error: e.errors[0].message }); }
 
+  // 2. Settings validation
   const { data: settings } = await supabaseAdmin.from('settings').select('*').eq('key', 'withdrawal').single();
   const wSettings = settings?.value || {};
-  if (!wSettings.enabled) return res.status(400).json({ error: 'Withdrawals disabled' });
+  if (wSettings.enabled === false) return res.status(400).json({ error: 'Withdrawals disabled' });
+
   const now = new Date();
   const openHour = parseInt(wSettings.open_hour || 10);
   const closeHour = parseInt(wSettings.close_hour || 17);
   if (now.getHours() < openHour || now.getHours() >= closeHour) {
     return res.status(400).json({ error: `Withdrawals only between ${openHour}:00 and ${closeHour}:00` });
   }
+
   if (amount < (wSettings.min_amount || 5000)) return res.status(400).json({ error: `Min withdrawal: ₦${wSettings.min_amount}` });
   if (amount > (wSettings.max_amount || 500000)) return res.status(400).json({ error: `Max withdrawal: ₦${wSettings.max_amount}` });
 
+  // 3. Balance Check & Deduct Immediately for Manual Processing
   const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', user.id).single();
-  if (wallet.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+  if (!wallet || wallet.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
 
   const { data: existing } = await supabaseAdmin.from('withdrawals').select('id').eq('user_id', user.id).eq('status', 'pending').maybeSingle();
   if (existing) return res.status(400).json({ error: 'You already have a pending withdrawal' });
 
+  // Lock user's requested amount
+  const newBalance = Number(wallet.balance) - Number(amount);
+  const { error: deductErr } = await supabaseAdmin.from('wallets').update({ balance: newBalance }).eq('user_id', user.id);
+  if (deductErr) return res.status(400).json({ error: deductErr.message });
+
+  // 4. Create Withdrawal Record
   const { data, error } = await supabaseAdmin.from('withdrawals').insert({
-    user_id: user.id, amount,
+    user_id: user.id, 
+    amount,
     bank_details: { bank_code, bank_name, account_number, account_name },
     status: 'pending'
   }).select().single();
-  if (error) return res.status(400).json({ error: error.message });
+
+  if (error) {
+    // Refund if database insert fails
+    await supabaseAdmin.from('wallets').update({ balance: wallet.balance }).eq('user_id', user.id);
+    return res.status(400).json({ error: error.message });
+  }
 
   await supabaseAdmin.from('activity_logs').insert({ user_id: user.id, action: 'withdrawal_request', details: { amount } });
   await sendTelegramMessage(`🏧 New withdrawal request: ₦${amount} from ${user.email}`);
@@ -139,10 +166,7 @@ async function approveWithdrawal(req, res) {
   const admin = await verifyAdmin(req);
   const { withdrawal_id, admin_notes } = req.body;
   const { data: wd } = await supabaseAdmin.from('withdrawals').select('*').eq('id', withdrawal_id).single();
-  if (!wd || wd.status !== 'pending') return res.status(400).json({ error: 'Invalid withdrawal' });
-
-  const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', wd.user_id).single();
-  if (wallet.balance < wd.amount) return res.status(400).json({ error: 'Insufficient balance' });
+  if (!wd || wd.status !== 'pending') return res.status(400).json({ error: 'Invalid or already processed withdrawal' });
 
   const { error: txnErr } = await supabaseAdmin.from('transactions').insert({
     user_id: wd.user_id,
@@ -161,13 +185,25 @@ async function approveWithdrawal(req, res) {
 async function rejectWithdrawal(req, res) {
   const admin = await verifyAdmin(req);
   const { withdrawal_id, admin_notes } = req.body;
+  const { data: wd } = await supabaseAdmin.from('withdrawals').select('*').eq('id', withdrawal_id).single();
+  if (!wd || wd.status !== 'pending') return res.status(400).json({ error: 'Invalid or already processed withdrawal' });
+
+  // Mark as rejected
   await supabaseAdmin.from('withdrawals').update({ status: 'rejected', admin_notes, updated_at: new Date() }).eq('id', withdrawal_id);
-  await sendTelegramMessage(`❌ Withdrawal rejected: ${withdrawal_id}`);
-  return res.status(200).json({ message: 'Withdrawal rejected' });
+
+  // Refund funds back to user's wallet
+  const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', wd.user_id).single();
+  if (wallet) {
+    const refundedBalance = Number(wallet.balance) + Number(wd.amount);
+    await supabaseAdmin.from('wallets').update({ balance: refundedBalance }).eq('user_id', wd.user_id);
+  }
+
+  await sendTelegramMessage(`❌ Withdrawal rejected and refunded: ${withdrawal_id}`);
+  return res.status(200).json({ message: 'Withdrawal rejected and refunded' });
 }
 
 // ============================================================
-// Community Withdrawal Proofs & Comments
+// COMMUNITY PROOFS & COMMENTS
 // ============================================================
 
 async function createWithdrawalProof(req, res) {
@@ -189,7 +225,6 @@ async function createWithdrawalProof(req, res) {
 }
 
 async function listWithdrawalProofs(req, res) {
-  // Public community feed
   const { data: proofs, error } = await supabaseAdmin
     .from('withdrawal_proofs')
     .select('*, profiles(full_name, email), proof_comments(*, profiles(full_name, email))')
@@ -197,7 +232,6 @@ async function listWithdrawalProofs(req, res) {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  // Generate signed URLs for private images if needed
   const items = await Promise.all(proofs.map(async (p) => {
     let url = p.image_url;
     if (url && !url.startsWith('http')) {
