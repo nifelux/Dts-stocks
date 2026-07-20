@@ -89,12 +89,10 @@ p{margin-bottom:1rem;color:var(--clr-text-secondary)}
 .btn-sm{padding:0.375rem 0.75rem;font-size:0.875rem}
 .btn-lg{padding:0.75rem 1.75rem;font-size:1.125rem}
 .btn-block{width:100%}
-.btn:disabled{opacity:0.5;cursor:not-allowed;pointer-events:none}
 
 /* Forms */
 .form-group{margin-bottom:1.25rem}
 .form-label{display:block;margin-bottom:0.375rem;font-weight:500;color:var(--clr-text)}
-.form-hint{font-size:0.78rem;color:var(--clr-text-secondary);margin-top:0.35rem}
 .form-input,.form-select,.form-textarea{
   width:100%;padding:0.625rem 0.875rem;border:1px solid var(--clr-border);
   border-radius:var(--radius);background:var(--clr-surface);color:var(--clr-text);
@@ -104,7 +102,6 @@ p{margin-bottom:1rem;color:var(--clr-text-secondary)}
   outline:none;border-color:var(--clr-primary);box-shadow:0 0 0 3px rgba(234,179,8,0.3)
 }
 .form-textarea{min-height:100px;resize:vertical}
-.form-input:invalid:not(:placeholder-shown){border-color:var(--clr-danger)}
 
 /* Cards */
 .card{
@@ -687,100 +684,100 @@ body{padding-bottom:88px}
 }
 
 /* ============================================================
-   MONEY MOVES  —  deposit / withdraw / transaction-history
-   (extends the tokens & components above, same visual system)
+   WITHDRAW PAGE — form card, amount field, bank combobox
    ============================================================ */
-.money-page{max-width:640px;margin:0 auto;padding:1.5rem 1rem 3rem}
-
-.back-row{display:flex;align-items:center;gap:0.6rem;margin-bottom:1.1rem}
-.back-btn{
-  display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;
-  border-radius:50%;background:var(--clr-surface);border:1px solid var(--clr-border);
-  color:var(--clr-text);flex-shrink:0;text-decoration:none;
+.form-card{margin-top:1.25rem}
+.form-section-label{
+  font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--clr-text-secondary);margin:1.6rem 0 0.75rem;
 }
-.back-btn svg{width:18px;height:18px}
-.back-row h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:1.3rem;color:var(--clr-purple-ink)}
+.form-section-label:first-child{margin-top:0}
+.field-hint{font-size:0.78rem;color:var(--clr-text-secondary);margin-top:0.4rem}
 
-/* Segmented tabs (used to flip between Deposit/Withdraw if ever combined) */
-.seg-tabs{display:flex;gap:0.35rem;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:999px;padding:0.3rem;margin-bottom:1.25rem}
-.seg-tab{flex:1;text-align:center;padding:0.55rem 0.75rem;border-radius:999px;font-weight:600;font-size:0.85rem;text-decoration:none;color:var(--clr-text-secondary)}
-.seg-tab.is-active{background:var(--clr-card);color:var(--clr-purple-ink);box-shadow:var(--shadow-sm)}
-
-/* Mini balance strip (used on withdraw page) */
-.balance-strip{
-  display:flex;align-items:center;justify-content:space-between;gap:1rem;
-  background:var(--gradient-navy);color:#fff;border-radius:var(--radius-lg);
-  padding:1.1rem 1.3rem;margin-bottom:1.25rem;
-}
-.balance-strip-label{font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);font-weight:600}
-.balance-strip-value{font-family:var(--font-display);font-size:1.6rem;font-weight:600;margin-top:0.15rem}
-
-/* Amount input with currency prefix */
+/* Amount field with large currency prefix */
 .amount-field{position:relative}
-.amount-field .ngn-prefix{
-  position:absolute;left:0.875rem;top:50%;transform:translateY(-50%);
-  font-weight:600;color:var(--clr-text-secondary);pointer-events:none;
+.amount-field .amount-prefix{
+  position:absolute;left:0.95rem;top:50%;transform:translateY(-50%);
+  font-family:var(--font-display);font-weight:600;font-size:1.35rem;color:var(--clr-purple-ink);
+  pointer-events:none;
 }
-.amount-field input{padding-left:1.9rem;font-weight:600;font-size:1.15rem}
-.quick-amounts{display:flex;gap:0.5rem;margin-top:0.6rem;flex-wrap:wrap}
-.quick-amount{
-  padding:0.4rem 0.85rem;border-radius:999px;border:1px solid var(--clr-border);
-  background:var(--clr-surface);font-size:0.8rem;font-weight:600;color:var(--clr-text);
-  cursor:pointer;transition:border-color var(--transition),color var(--transition);
+.amount-field input{
+  padding-left:2.1rem;font-family:var(--font-display);font-weight:600;font-size:1.35rem;
+  color:var(--clr-purple-ink);height:3.4rem;
 }
-.quick-amount:hover,.quick-amount.is-active{border-color:var(--clr-purple);color:var(--clr-purple-deep);background:#F5F2FF}
+.amount-field input::placeholder{font-family:var(--font-family);font-weight:400;font-size:1rem;color:var(--clr-text-secondary)}
 
-/* Bank / payment detail card (deposit instructions) */
-.detail-card{
-  background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:var(--radius);
-  padding:1.1rem 1.2rem;margin-bottom:1.25rem;
+.quick-chips{display:flex;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap}
+.quick-chip{
+  flex:1;min-width:64px;padding:0.45rem 0.6rem;border-radius:999px;border:1px solid var(--clr-border);
+  background:var(--clr-surface);color:var(--clr-text-secondary);font-weight:700;font-size:0.8rem;
+  cursor:pointer;transition:background var(--transition),color var(--transition),border-color var(--transition);
 }
-.detail-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.55rem 0;border-bottom:1px dashed var(--clr-border)}
-.detail-row:last-child{border-bottom:none}
-.detail-row-label{font-size:0.78rem;color:var(--clr-text-secondary)}
-.detail-row-value{font-weight:700;font-size:0.95rem;text-align:right}
-.copy-btn{
-  display:inline-flex;align-items:center;gap:0.3rem;background:none;border:none;
-  color:var(--clr-purple-deep);font-weight:700;font-size:0.78rem;cursor:pointer;padding:0.2rem 0;
+.quick-chip:hover{border-color:var(--clr-purple);color:var(--clr-purple-deep)}
+.quick-chip.is-active{background:var(--clr-purple-ink);border-color:var(--clr-purple-ink);color:#fff}
+
+/* Bank combobox */
+.combo{position:relative}
+.combo-toggle{
+  display:flex;align-items:center;justify-content:space-between;gap:0.5rem;cursor:pointer;
+  background:var(--clr-surface);
 }
-.copy-btn svg{width:14px;height:14px}
-.copy-btn.is-copied{color:var(--clr-green-deep)}
-
-/* Withdrawal window note */
-.window-note{display:flex;align-items:flex-start;gap:0.65rem}
-.window-note svg{width:18px;height:18px;flex-shrink:0;margin-top:0.1rem}
-
-/* Filter chips (transaction history) */
-.filter-chips{display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.35rem;margin-bottom:1.1rem;scrollbar-width:none}
-.filter-chips::-webkit-scrollbar{display:none}
-.filter-chip{
-  flex-shrink:0;padding:0.5rem 1rem;border-radius:999px;border:1px solid var(--clr-border);
-  background:var(--clr-card);font-size:0.82rem;font-weight:600;color:var(--clr-text-secondary);
-  cursor:pointer;white-space:nowrap;transition:background var(--transition),color var(--transition),border-color var(--transition);
+.combo-toggle-left{display:flex;align-items:center;gap:0.6rem;min-width:0}
+.combo-toggle-icon{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;background:#EDE7FF;color:var(--clr-purple-deep);
+  display:flex;align-items:center;justify-content:center;
 }
-.filter-chip.is-active{background:var(--clr-purple-ink);color:#fff;border-color:var(--clr-purple-ink)}
-
-/* Date group divider for history list */
-.date-divider{font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--clr-text-secondary);margin:1.25rem 0 0.4rem}
-.date-divider:first-child{margin-top:0}
-
-/* Empty state */
-.empty-state{text-align:center;padding:3rem 1rem}
-.empty-state-icon{
-  width:64px;height:64px;border-radius:50%;background:#EDE7FF;color:var(--clr-purple-deep);
-  display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;
+.combo-toggle-icon svg{width:14px;height:14px}
+.combo-toggle-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo-toggle-label.is-placeholder{color:var(--clr-text-secondary)}
+.combo-chevron{flex-shrink:0;color:var(--clr-text-secondary);transition:transform var(--transition)}
+.combo.is-open .combo-chevron{transform:rotate(180deg)}
+.combo-panel{
+  position:absolute;left:0;right:0;top:calc(100% + 0.4rem);z-index:20;
+  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);overflow:hidden;
 }
-.empty-state-icon svg{width:28px;height:28px}
-.empty-state h4{font-family:var(--font-display);font-weight:600;margin-bottom:0.3rem;color:var(--clr-text)}
-.empty-state p{font-size:0.85rem;margin-bottom:1.25rem}
+.combo-search{
+  width:100%;border:none;border-bottom:1px solid var(--clr-border);padding:0.75rem 0.9rem;
+  font-family:inherit;font-size:0.92rem;background:transparent;color:var(--clr-text);
+}
+.combo-search:focus{outline:none;background:var(--clr-surface)}
+.combo-list{max-height:220px;overflow-y:auto}
+.combo-option{
+  display:block;width:100%;text-align:left;padding:0.65rem 0.9rem;border:none;background:none;
+  font-family:inherit;font-size:0.9rem;color:var(--clr-text);cursor:pointer;
+}
+.combo-option:hover,.combo-option.is-focused{background:var(--clr-surface)}
+.combo-option.is-selected{color:var(--clr-purple-deep);font-weight:600}
+.combo-empty{padding:0.9rem;font-size:0.85rem;color:var(--clr-text-secondary);text-align:center}
 
-/* Icon tone reused for txn-icon backgrounds */
-.txn-icon.tone-green{background:#DDF7EA;color:var(--clr-green-deep)}
-.txn-icon.tone-danger{background:#FEE2E2;color:var(--clr-danger)}
-.txn-icon.tone-purple{background:#EDE7FF;color:var(--clr-purple-deep)}
-.txn-icon.tone-yellow{background:#FFF3D6;color:var(--clr-yellow-deep)}
+/* Payout summary shown once the form is filled */
+.summary-card{
+  background:var(--clr-surface);border:1px dashed var(--clr-border);border-radius:var(--radius);
+  padding:0.9rem 1.1rem;margin-top:1.25rem;
+}
+.summary-row{display:flex;justify-content:space-between;gap:1rem;padding:0.3rem 0;font-size:0.88rem}
+.summary-row span:first-child{color:var(--clr-text-secondary)}
+.summary-row span:last-child{font-weight:600;text-align:right}
+
+.submit-note{
+  display:flex;align-items:flex-start;gap:0.5rem;margin-top:0.9rem;
+  font-size:0.78rem;color:var(--clr-text-secondary);
+}
+.submit-note svg{flex-shrink:0;margin-top:0.1rem;color:var(--clr-purple-deep)}
+
+/* History empty state */
+.history-empty{
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:0.6rem;
+  padding:2.5rem 1rem;color:var(--clr-text-secondary);
+}
+.history-empty-icon{
+  width:48px;height:48px;border-radius:50%;background:var(--clr-surface);
+  display:flex;align-items:center;justify-content:center;color:var(--clr-purple-deep);
+}
+.history-empty-icon svg{width:22px;height:22px}
+.history-empty strong{color:var(--clr-text)}
 
 @media (max-width:480px){
-  .balance-strip{flex-direction:column;align-items:flex-start;gap:0.25rem}
-  .detail-row-value{text-align:right}
+  .quick-chip{min-width:0}
 }
