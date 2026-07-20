@@ -200,7 +200,9 @@ async function createWithdrawal(req, res) {
     return res.status(403).json({ error: 'KYC verification is required before making withdrawals' });
   }
 
-  // 3. Wallet Balance Check
+  // 3. Wallet Balance Check — account for amounts already tied up in
+  // other pending withdrawal requests, since the balance itself is no
+  // longer debited until an admin approves (see below).
   const { data: wallet, error: walletErr } = await supabaseAdmin
     .from('wallets')
     .select('balance')
@@ -211,22 +213,23 @@ async function createWithdrawal(req, res) {
     return res.status(400).json({ error: 'Wallet record not found' });
   }
 
-  if (Number(wallet.balance) < Number(amount)) {
-    return res.status(400).json({ error: 'Insufficient wallet balance' });
+  const { data: pendingRows } = await supabaseAdmin
+    .from('withdrawals')
+    .select('amount')
+    .eq('user_id', user.id)
+    .eq('status', 'pending');
+
+  const pendingTotal = (pendingRows || []).reduce((sum, r) => sum + Number(r.amount), 0);
+  const availableBalance = Number(wallet.balance) - pendingTotal;
+
+  if (Number(amount) > availableBalance) {
+    return res.status(400).json({ error: 'Insufficient available balance (some funds may be tied up in pending withdrawal requests)' });
   }
 
-  // 4. Deduct Wallet Balance Immediately
-  const newBalance = Number(wallet.balance) - Number(amount);
-  const { error: deductErr } = await supabaseAdmin
-    .from('wallets')
-    .update({ balance: newBalance, updated_at: new Date() })
-    .eq('user_id', user.id);
-
-  if (deductErr) {
-    return res.status(500).json({ error: 'Failed to process balance deduction' });
-  }
-
-  // 5. Create Withdrawal Record (Status: pending)
+  // 4. Create Withdrawal Record (Status: pending). The wallet is NOT
+  // debited here — trg_process_transaction debits it automatically
+  // once the linked transaction below is marked 'approved' by an admin.
+  // Debiting it here too was the cause of the double-debit bug.
   const { data: wd, error: wdErr } = await supabaseAdmin
     .from('withdrawals')
     .insert({
@@ -240,16 +243,10 @@ async function createWithdrawal(req, res) {
     .single();
 
   if (wdErr) {
-    // Rollback wallet balance if withdrawal insertion fails
-    await supabaseAdmin
-      .from('wallets')
-      .update({ balance: wallet.balance, updated_at: new Date() })
-      .eq('user_id', user.id);
-
     return res.status(500).json({ error: wdErr.message });
   }
 
-  // 6. Log Transaction Record Immediately as Pending
+  // 5. Log Transaction Record Immediately as Pending
   await supabaseAdmin.from('transactions').insert({
     user_id: user.id,
     type: 'withdrawal',
@@ -260,7 +257,7 @@ async function createWithdrawal(req, res) {
     created_at: new Date()
   });
 
-  // 7. Telegram Notification
+  // 6. Telegram Notification
   await sendTelegramMessage(
     `💸 *New Withdrawal Request*\n` +
     `User ID: \`${user.id}\`\n` +
@@ -274,4 +271,4 @@ async function createWithdrawal(req, res) {
     message: 'Withdrawal request submitted successfully',
     withdrawal: wd
   });
-      }
+}
