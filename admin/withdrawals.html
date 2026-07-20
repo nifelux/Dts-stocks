@@ -102,7 +102,8 @@
       }
 
       const tbody = document.querySelector('#withdrawals-table tbody');
-      tbody.innerHTML = data.map(w => {
+      const rows = data.withdrawals || [];
+      tbody.innerHTML = rows.map(w => {
         const bank = w.bank_details || {};
         return `
           <tr>
@@ -127,7 +128,7 @@
       if (!confirm('Have you manually transferred this payment to the user?')) return;
       clearError();
       const token = await getToken();
-      const res = await fetch('/api/finance?action=approveWithdrawal', { 
+      const res = await fetch('/api/admin?action=approveWithdrawal', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ withdrawal_id: id }) 
@@ -141,7 +142,7 @@
       if (!confirm('Are you sure you want to reject this request? The funds will be refunded back to the user\'s wallet.')) return;
       clearError();
       const token = await getToken();
-      const res = await fetch('/api/finance?action=rejectWithdrawal', { 
+      const res = await fetch('/api/admin?action=rejectWithdrawal', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ withdrawal_id: id }) 
