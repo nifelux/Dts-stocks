@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 }
 
 // ============================================================
-// DEPOSITS (Unchanged from original)
+// DEPOSITS
 // ============================================================
 
 async function createDeposit(req, res) {
@@ -71,6 +71,13 @@ async function approveDeposit(req, res) {
   if (!deposit) return res.status(404).json({ error: 'Deposit not found' });
   if (deposit.status !== 'pending') return res.status(400).json({ error: 'Deposit already processed' });
 
+  // Add funds to wallet balance
+  const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', deposit.user_id).single();
+  const currentBalance = wallet ? Number(wallet.balance) : 0;
+  const newBalance = currentBalance + Number(deposit.amount);
+
+  await supabaseAdmin.from('wallets').upsert({ user_id: deposit.user_id, balance: newBalance }, { onConflict: 'user_id' });
+
   await supabaseAdmin.from('deposits').update({ status: 'approved', admin_notes, updated_at: new Date() }).eq('id', deposit_id);
 
   const { error: txnErr } = await supabaseAdmin.from('transactions').insert({
@@ -93,7 +100,6 @@ async function rejectDeposit(req, res) {
   await sendTelegramMessage(`❌ Deposit rejected: ${deposit_id}`);
   return res.status(200).json({ message: 'Deposit rejected' });
 }
- 
 
 // ============================================================
 // WITHDRAWALS
@@ -126,20 +132,30 @@ async function createWithdrawal(req, res) {
   if (amount < (wSettings.min_amount || 5000)) return res.status(400).json({ error: `Min withdrawal: ₦${wSettings.min_amount}` });
   if (amount > (wSettings.max_amount || 500000)) return res.status(400).json({ error: `Max withdrawal: ₦${wSettings.max_amount}` });
 
-  // 3. Balance Check
+  // 3. Balance Check & Prevent Multiple Pending
   const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', user.id).single();
-  if (!wallet || wallet.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+  if (!wallet || Number(wallet.balance) < Number(amount)) return res.status(400).json({ error: 'Insufficient balance' });
 
-  // 4. Prevent Multiple Pending Requests
   const { data: existing } = await supabaseAdmin.from('withdrawals').select('id').eq('user_id', user.id).eq('status', 'pending').maybeSingle();
   if (existing) return res.status(400).json({ error: 'You already have a pending withdrawal request.' });
 
-  // 5. STEP 1: DEDUCT BALANCE IMMEDIATELY ON REQUEST
-  const newBalance = Number(wallet.balance) - Number(amount);
-  const { error: deductErr } = await supabaseAdmin.from('wallets').update({ balance: newBalance }).eq('user_id', user.id);
+  // 4. DEDUCT REQUESTED AMOUNT IMMEDIATELY
+  let deductErr;
+  const { error: rpcErr } = await supabaseAdmin.rpc('deduct_wallet_balance', {
+    p_user_id: user.id,
+    p_amount: Number(amount)
+  });
+
+  if (rpcErr) {
+    // Fallback to manual update if RPC function is not created
+    const newBalance = Number(wallet.balance) - Number(amount);
+    const { error: updateErr } = await supabaseAdmin.from('wallets').update({ balance: newBalance }).eq('user_id', user.id);
+    deductErr = updateErr;
+  }
+
   if (deductErr) return res.status(400).json({ error: deductErr.message });
 
-  // 6. Create Withdrawal Record
+  // 5. Create Withdrawal Record
   const { data, error } = await supabaseAdmin.from('withdrawals').insert({
     user_id: user.id, 
     amount: Number(amount),
@@ -148,27 +164,32 @@ async function createWithdrawal(req, res) {
   }).select().single();
 
   if (error) {
-    // Rollback deduction if withdrawal table insert fails
+    // Rollback balance deduction if record insert fails
     await supabaseAdmin.from('wallets').update({ balance: wallet.balance }).eq('user_id', user.id);
     return res.status(400).json({ error: error.message });
   }
 
   await supabaseAdmin.from('activity_logs').insert({ user_id: user.id, action: 'withdrawal_request', details: { amount } });
-  await sendTelegramMessage(`🏧 New withdrawal request: ₦${amount} from ${user.email}`);
+  await sendTelegramMessage(`ATM New withdrawal request: ₦${amount} from ${user.email}`);
+  return res.status(200).json(data);
+}
+
+async function listWithdrawals(req, res) {
+  const user = await verifyUser(req);
+  const { data } = await supabaseAdmin.from('withdrawals').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
   return res.status(200).json(data);
 }
 
 async function approveWithdrawal(req, res) {
   const admin = await verifyAdmin(req);
   const { withdrawal_id, admin_notes } = req.body;
-
   const { data: wd } = await supabaseAdmin.from('withdrawals').select('*').eq('id', withdrawal_id).single();
   if (!wd || wd.status !== 'pending') return res.status(400).json({ error: 'Invalid or already processed withdrawal' });
 
-  // STEP 2: MARK APPROVED (DO NOT DEDUCT AGAIN, IT WAS DEDUCTED ON REQUEST)
+  // Mark withdrawal as approved (Funds were already deducted when requested)
   await supabaseAdmin.from('withdrawals').update({ status: 'approved', admin_notes, updated_at: new Date() }).eq('id', withdrawal_id);
 
-  // Log transaction
+  // Log transaction history
   const { error: txnErr } = await supabaseAdmin.from('transactions').insert({
     user_id: wd.user_id,
     type: 'withdrawal',
@@ -185,21 +206,86 @@ async function approveWithdrawal(req, res) {
 async function rejectWithdrawal(req, res) {
   const admin = await verifyAdmin(req);
   const { withdrawal_id, admin_notes } = req.body;
-
   const { data: wd } = await supabaseAdmin.from('withdrawals').select('*').eq('id', withdrawal_id).single();
   if (!wd || wd.status !== 'pending') return res.status(400).json({ error: 'Invalid or already processed withdrawal' });
 
-  // 1. Mark Withdrawal as Rejected
+  // 1. Mark withdrawal as rejected
   await supabaseAdmin.from('withdrawals').update({ status: 'rejected', admin_notes, updated_at: new Date() }).eq('id', withdrawal_id);
 
-  // 2. STEP 3: REVERSE / REFUND DEDUCTED AMOUNT BACK TO WALLET
-  const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', wd.user_id).single();
-  if (wallet) {
-    const refundedBalance = Number(wallet.balance) + Number(wd.amount);
-    await supabaseAdmin.from('wallets').update({ balance: refundedBalance }).eq('user_id', wd.user_id);
+  // 2. REVERSE / REFUND DEDUCTED AMOUNT BACK TO WALLET
+  const { error: rpcErr } = await supabaseAdmin.rpc('credit_wallet_balance', {
+    p_user_id: wd.user_id,
+    p_amount: Number(wd.amount)
+  });
+
+  if (rpcErr) {
+    // Fallback to manual wallet update if RPC is not created
+    const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', wd.user_id).single();
+    if (wallet) {
+      const refundedBalance = Number(wallet.balance) + Number(wd.amount);
+      await supabaseAdmin.from('wallets').update({ balance: refundedBalance }).eq('user_id', wd.user_id);
+    }
   }
 
   await sendTelegramMessage(`❌ Withdrawal rejected and refunded: ${withdrawal_id}`);
   return res.status(200).json({ message: 'Withdrawal rejected and refunded' });
-    }
+}
 
+// ============================================================
+// COMMUNITY PROOFS & COMMENTS
+// ============================================================
+
+async function createWithdrawalProof(req, res) {
+  const user = await verifyUser(req);
+  const { amount, image_url, caption } = req.body;
+
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'Please enter a valid amount' });
+  if (!image_url) return res.status(400).json({ error: 'Screenshot image is required' });
+
+  const { data, error } = await supabaseAdmin.from('withdrawal_proofs').insert({
+    user_id: user.id,
+    amount: Number(amount),
+    image_url,
+    caption: caption || ''
+  }).select().single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  return res.status(200).json(data);
+}
+
+async function listWithdrawalProofs(req, res) {
+  const { data: proofs, error } = await supabaseAdmin
+    .from('withdrawal_proofs')
+    .select('*, profiles(full_name, email), proof_comments(*, profiles(full_name, email))')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const items = await Promise.all(proofs.map(async (p) => {
+    let url = p.image_url;
+    if (url && !url.startsWith('http')) {
+      const { data: signed } = await supabaseAdmin.storage.from('proofs').createSignedUrl(url, 3600);
+      url = signed?.signedUrl || url;
+    }
+    return { ...p, display_url: url };
+  }));
+
+  return res.status(200).json(items);
+}
+
+async function addProofComment(req, res) {
+  const user = await verifyUser(req);
+  const { proof_id, comment } = req.body;
+
+  if (!proof_id) return res.status(400).json({ error: 'Missing proof_id' });
+  if (!comment || !comment.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+
+  const { data, error } = await supabaseAdmin.from('proof_comments').insert({
+    proof_id,
+    user_id: user.id,
+    comment: comment.trim()
+  }).select('*, profiles(full_name, email)').single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  return res.status(200).json(data);
+}
