@@ -59,21 +59,22 @@
     async function load() {
       const status = document.getElementById('status-filter').value;
       const token = await getToken();
-      const res = await fetch(`/api/admin?action=deposits&status=${status}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/admin?action=depositsList&status=${status}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       const tbody = document.querySelector('#deposits-table tbody');
-      
-      if (!data || data.length === 0) {
+      const rows = data.deposits || [];
+
+      if (rows.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">No deposit records found.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = data.map(d => `
+      tbody.innerHTML = rows.map(d => `
         <tr>
           <td>${d.user_id?.slice(0,8)}</td>
           <td>₦${Number(d.amount).toLocaleString()}</td>
           <td>${d.payment_method || 'bank_transfer'}</td>
-          <td>${d.payment_details || d.proof_image_url || 'N/A'}</td>
+          <td>${d.payment_details || d.proof_url || 'N/A'}</td>
           <td><span class="badge">${d.status}</span></td>
           <td>${d.status === 'pending' ? `
             <button class="btn btn-sm btn-success" onclick="approve('${d.id}')">Approve</button>
@@ -86,7 +87,7 @@
     window.approve = async (id) => {
       if (!confirm('Approve this deposit and credit user wallet?')) return;
       const token = await getToken();
-      await fetch('/api/finance?action=approveDeposit', { 
+      await fetch('/api/admin?action=approveDeposit', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ deposit_id: id }) 
@@ -98,7 +99,7 @@
       const reason = prompt('Reason for rejection:');
       if (reason === null) return;
       const token = await getToken();
-      await fetch('/api/finance?action=rejectDeposit', { 
+      await fetch('/api/admin?action=rejectDeposit', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ deposit_id: id, admin_notes: reason }) 
