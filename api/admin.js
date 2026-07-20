@@ -172,41 +172,11 @@ async function rejectWithdrawal(req, res) {
     .update({ status: 'rejected' })
     .eq('reference', `wd_${wd.id}`);
 
-  // 3. Refund Wallet Balance
-  const { error: rpcErr } = await supabaseAdmin.rpc('credit_wallet_balance', {
-    p_user_id: wd.user_id,
-    p_amount: Number(wd.amount)
-  });
-
-  if (rpcErr) {
-    // Fallback: Direct database update if stored procedure fails
-    const { data: wallet } = await supabaseAdmin
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', wd.user_id)
-      .single();
-
-    if (wallet) {
-      const refundedBalance = Number(wallet.balance) + Number(wd.amount);
-      await supabaseAdmin
-        .from('wallets')
-        .update({ balance: refundedBalance, updated_at: new Date() })
-        .eq('user_id', wd.user_id);
-    }
-  }
-
-  // 3b. Record the reversal as its own transaction so it's visible in the
-  // user's history — previously only the original (now-rejected) withdrawal
-  // transaction existed, with nothing showing the refund actually happened.
-  await supabaseAdmin.from('transactions').insert({
-    user_id: wd.user_id,
-    type: 'withdrawal_reversal',
-    amount: Number(wd.amount),
-    status: 'approved',
-    reference: `wd_refund_${wd.id}`,
-    description: `Withdrawal request rejected — ₦${wd.amount} refunded to wallet`,
-    created_at: new Date()
-  });
+  // 3. No refund needed — the wallet was never debited at request time.
+  // The trg_process_transaction trigger only debits balance once the
+  // linked transaction is marked 'approved', which never happens for a
+  // rejected request (its transaction is marked 'rejected' below), so
+  // the funds were never actually removed from the wallet.
 
   // 4. Send Notification
   await sendTelegramMessage(
@@ -253,33 +223,15 @@ async function approveDeposit(req, res) {
     return res.status(500).json({ error: 'Failed to update deposit status' });
   }
 
-  // 2. Mark Transaction Approved
+  // 2. Mark Transaction Approved — this update is what actually credits
+  // the wallet: trg_process_transaction fires on this status change and
+  // applies balance += amount for type='deposit'. Calling
+  // credit_wallet_balance directly afterward (as this used to) credited
+  // the wallet a second time for every approved deposit.
   await supabaseAdmin
     .from('transactions')
     .update({ status: 'approved' })
     .eq('reference', `dp_${deposit.id}`);
-
-  // 3. Credit User Balance
-  const { error: rpcErr } = await supabaseAdmin.rpc('credit_wallet_balance', {
-    p_user_id: deposit.user_id,
-    p_amount: Number(deposit.amount)
-  });
-
-  if (rpcErr) {
-    // Fallback: Direct database upsert if stored procedure fails
-    const { data: wallet } = await supabaseAdmin
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', deposit.user_id)
-      .single();
-
-    const currentBalance = wallet ? Number(wallet.balance) : 0;
-    await supabaseAdmin.from('wallets').upsert({
-      user_id: deposit.user_id,
-      balance: currentBalance + Number(deposit.amount),
-      updated_at: new Date()
-    });
-  }
 
   // 4. Send Notification
   await sendTelegramMessage(
