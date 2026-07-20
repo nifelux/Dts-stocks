@@ -1,7 +1,8 @@
 /**
- * Finance API – Deposits & Withdrawals
+ * Finance API – Deposits, Withdrawals & Community Proofs
  * Actions: createDeposit, listDeposits, approveDeposit, rejectDeposit,
- *          createWithdrawal, listWithdrawals, approveWithdrawal, rejectWithdrawal
+ *          createWithdrawal, listWithdrawals, approveWithdrawal, rejectWithdrawal,
+ *          createWithdrawalProof, listWithdrawalProofs, addProofComment
  */
 import supabaseAdmin from '../lib/supabase.js';
 import { verifyUser, verifyAdmin } from '../lib/auth.js';
@@ -20,6 +21,9 @@ export default async function handler(req, res) {
       case 'listWithdrawals': return listWithdrawals(req, res);
       case 'approveWithdrawal': return approveWithdrawal(req, res);
       case 'rejectWithdrawal': return rejectWithdrawal(req, res);
+      case 'createWithdrawalProof': return createWithdrawalProof(req, res);
+      case 'listWithdrawalProofs': return listWithdrawalProofs(req, res);
+      case 'addProofComment': return addProofComment(req, res);
       default: return res.status(400).json({ error: 'Invalid action' });
     }
   } catch (err) {
@@ -29,22 +33,23 @@ export default async function handler(req, res) {
 
 async function createDeposit(req, res) {
   const user = await verifyUser(req);
-  const { amount, payment_method, proof_image_url } = req.body;
+  const { amount, payment_method, payment_details } = req.body;
 
   if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid deposit amount' });
-  if (!proof_image_url) return res.status(400).json({ error: 'Payment proof screenshot is required' });
+  if (!payment_details || !payment_details.trim()) return res.status(400).json({ error: 'Sender name and bank name are required' });
 
   const { data, error } = await supabaseAdmin.from('deposits').insert({
     user_id: user.id,
     amount,
     payment_method: payment_method || 'bank_transfer',
-    proof_image_url
+    proof_image_url: payment_details, // stored as text details
+    payment_details: payment_details
   }).select().single();
 
   if (error) return res.status(400).json({ error: error.message });
 
-  await supabaseAdmin.from('activity_logs').insert({ user_id: user.id, action: 'deposit_request', details: { amount } });
-  await sendTelegramMessage(`💰 New manual deposit request: ₦${amount} from ${user.email}`);
+  await supabaseAdmin.from('activity_logs').insert({ user_id: user.id, action: 'deposit_request', details: { amount, details: payment_details } });
+  await sendTelegramMessage(`💰 New deposit request: ₦${amount} from ${user.email}\nSender Details: ${payment_details}`);
   return res.status(200).json(data);
 }
 
@@ -126,10 +131,6 @@ async function createWithdrawal(req, res) {
 
 async function listWithdrawals(req, res) {
   const user = await verifyUser(req);
-  const { data: kycCheck } = await supabaseAdmin.from('profiles').select('kyc_status').eq('id', user.id).single();
-  if (!kycCheck || kycCheck.kyc_status !== 'approved') {
-    return res.status(400).json({ error: 'KYC verification required to withdraw. Please upload your face and full name on the KYC page.' });
-  }
   const { data } = await supabaseAdmin.from('withdrawals').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
   return res.status(200).json(data);
 }
@@ -163,4 +164,65 @@ async function rejectWithdrawal(req, res) {
   await supabaseAdmin.from('withdrawals').update({ status: 'rejected', admin_notes, updated_at: new Date() }).eq('id', withdrawal_id);
   await sendTelegramMessage(`❌ Withdrawal rejected: ${withdrawal_id}`);
   return res.status(200).json({ message: 'Withdrawal rejected' });
+}
+
+// ============================================================
+// Community Withdrawal Proofs & Comments
+// ============================================================
+
+async function createWithdrawalProof(req, res) {
+  const user = await verifyUser(req);
+  const { amount, image_url, caption } = req.body;
+
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'Please enter a valid amount' });
+  if (!image_url) return res.status(400).json({ error: 'Screenshot image is required' });
+
+  const { data, error } = await supabaseAdmin.from('withdrawal_proofs').insert({
+    user_id: user.id,
+    amount: Number(amount),
+    image_url,
+    caption: caption || ''
+  }).select().single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  return res.status(200).json(data);
+}
+
+async function listWithdrawalProofs(req, res) {
+  // Public community feed
+  const { data: proofs, error } = await supabaseAdmin
+    .from('withdrawal_proofs')
+    .select('*, profiles(full_name, email), proof_comments(*, profiles(full_name, email))')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Generate signed URLs for private images if needed
+  const items = await Promise.all(proofs.map(async (p) => {
+    let url = p.image_url;
+    if (url && !url.startsWith('http')) {
+      const { data: signed } = await supabaseAdmin.storage.from('proofs').createSignedUrl(url, 3600);
+      url = signed?.signedUrl || url;
+    }
+    return { ...p, display_url: url };
+  }));
+
+  return res.status(200).json(items);
+}
+
+async function addProofComment(req, res) {
+  const user = await verifyUser(req);
+  const { proof_id, comment } = req.body;
+
+  if (!proof_id) return res.status(400).json({ error: 'Missing proof_id' });
+  if (!comment || !comment.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+
+  const { data, error } = await supabaseAdmin.from('proof_comments').insert({
+    proof_id,
+    user_id: user.id,
+    comment: comment.trim()
+  }).select('*, profiles(full_name, email)').single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  return res.status(200).json(data);
 }
