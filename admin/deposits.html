@@ -39,7 +39,7 @@
             <th>User ID</th>
             <th>Amount</th>
             <th>Method</th>
-            <th>Proof</th>
+            <th>Sender Name & Bank</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -68,37 +68,19 @@
         return;
       }
 
-      // Generate signed URLs for private proof image paths
-      const rows = await Promise.all(data.map(async (d) => {
-        let proofLink = 'None';
-        if (d.proof_image_url) {
-          // Check if proof_image_url is already a full URL or relative storage path
-          if (d.proof_image_url.startsWith('http')) {
-            proofLink = `<a href="${d.proof_image_url}" target="_blank" class="btn btn-sm btn-outline">View</a>`;
-          } else {
-            const { data: signedData } = await supabase.storage.from('proofs').createSignedUrl(d.proof_image_url, 3600);
-            if (signedData?.signedUrl) {
-              proofLink = `<a href="${signedData.signedUrl}" target="_blank" class="btn btn-sm btn-outline">View Receipt</a>`;
-            }
-          }
-        }
-
-        return `
-          <tr>
-            <td>${d.user_id?.slice(0,8)}</td>
-            <td>₦${Number(d.amount).toLocaleString()}</td>
-            <td>${d.payment_method || 'bank_transfer'}</td>
-            <td>${proofLink}</td>
-            <td><span class="badge">${d.status}</span></td>
-            <td>${d.status === 'pending' ? `
-              <button class="btn btn-sm btn-success" onclick="approve('${d.id}')">Approve</button>
-              <button class="btn btn-sm btn-danger" onclick="reject('${d.id}')">Reject</button>
-            ` : '-'}</td>
-          </tr>
-        `;
-      }));
-
-      tbody.innerHTML = rows.join('');
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td>${d.user_id?.slice(0,8)}</td>
+          <td>₦${Number(d.amount).toLocaleString()}</td>
+          <td>${d.payment_method || 'bank_transfer'}</td>
+          <td>${d.payment_details || d.proof_image_url || 'N/A'}</td>
+          <td><span class="badge">${d.status}</span></td>
+          <td>${d.status === 'pending' ? `
+            <button class="btn btn-sm btn-success" onclick="approve('${d.id}')">Approve</button>
+            <button class="btn btn-sm btn-danger" onclick="reject('${d.id}')">Reject</button>
+          ` : '-'}</td>
+        </tr>
+      `).join('');
     }
 
     window.approve = async (id) => {
