@@ -21,13 +21,24 @@
     <div id="kyc-gate"></div>
 
     <form id="withdraw-form">
-      <div class="form-group"><label class="form-label">Amount (₦)</label><input type="number" id="amount" class="form-input" required></div>
+      <div class="form-group">
+        <label class="form-label">Amount (₦)</label>
+        <input type="number" id="amount" class="form-input" required min="1000">
+      </div>
       <div class="form-group">
         <label class="form-label">Bank</label>
-        <select id="bank_code" class="form-select" required><option value="" disabled selected>Select your bank</option></select>
+        <select id="bank_code" class="form-select" required>
+          <option value="" disabled selected>Select your bank</option>
+        </select>
       </div>
-      <div class="form-group"><label class="form-label">Account Number</label><input id="account_number" class="form-input" required maxlength="10"></div>
-      <div class="form-group"><label class="form-label">Account Name</label><input id="account_name" class="form-input" required></div>
+      <div class="form-group">
+        <label class="form-label">Account Number</label>
+        <input id="account_number" class="form-input" required maxlength="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Account Name</label>
+        <input id="account_name" class="form-input" required>
+      </div>
       <button type="submit" class="btn btn-primary btn-block" id="withdraw-submit-btn">Request Withdrawal</button>
     </form>
 
@@ -45,8 +56,6 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw'
     );
 
-    // Required so the shared header (assets/js/components.js) can detect
-    // the logged-in session — without this it always shows the guest menu.
     window.supabase = supabase;
 
     async function checkAuth() {
@@ -62,11 +71,6 @@
     }
     function clearError() {
       document.getElementById('error-alert').style.display = 'none';
-    }
-
-    function statusBadge(status) {
-      const map = { approved: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' };
-      return `<span class="badge ${map[status] || ''}">${status}</span>`;
     }
 
     function populateBankSelect() {
@@ -132,10 +136,6 @@
       btn.textContent = 'Submitting…';
 
       try {
-        // Min/max amount and the processing-hours window are enforced
-        // server-side in api/finance.js (createWithdrawal) — the
-        // `settings` table is RLS-locked to service_role only, so this
-        // page can't read those limits itself to pre-validate.
         await callFinanceApi('createWithdrawal', { amount, bank_code, bank_name, account_number, account_name });
         alert('Withdrawal request submitted!');
         location.reload();
@@ -147,23 +147,24 @@
       }
     });
 
-    function withdrawalStatusLabel(w) {
-      if (w.status === 'approved') {
-        if (w.payout_status === 'success') return '<span class="badge badge-success">Paid out</span>';
-        if (w.payout_status === 'processing') return '<span class="badge badge-warning">Sending…</span>';
-        if (w.payout_status === 'failed') return '<span class="badge badge-danger">Payout failed</span>';
-        return '<span class="badge badge-success">Approved</span>';
-      }
-      return statusBadge(w.status);
+    function statusBadge(status) {
+      if (status === 'approved') return '<span class="badge badge-success">Paid</span>';
+      if (status === 'rejected') return '<span class="badge badge-danger">Rejected</span>';
+      return '<span class="badge badge-warning">Pending</span>';
     }
 
     async function loadHistory(user) {
       const { data } = await supabase.from('withdrawals').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       document.getElementById('history').innerHTML = data?.map(w => `
-        <div class="txn-row">
-          <span class="currency-ngn">${w.amount.toLocaleString()}</span>
-          ${withdrawalStatusLabel(w)}
-          <span class="text-muted" style="font-size:0.8rem;">${new Date(w.created_at).toLocaleDateString()}</span>
+        <div class="txn-row" style="display:flex; justify-content:space-between; align-items:center; padding: 0.75rem 0; border-bottom:1px solid #eee;">
+          <div>
+            <strong>₦${w.amount.toLocaleString()}</strong><br>
+            <small class="text-muted">${w.bank_details?.bank_name || ''} - ${w.bank_details?.account_number || ''}</small>
+          </div>
+          <div style="text-align:right;">
+            ${statusBadge(w.status)}<br>
+            <small class="text-muted">${new Date(w.created_at).toLocaleDateString()}</small>
+          </div>
         </div>`).join('') || '<p class="text-muted">No withdrawals yet.</p>';
     }
 
