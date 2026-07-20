@@ -121,7 +121,7 @@ async function createDeposit(req, res) {
   const user = await verifyUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized: Please log in' });
 
-  const { amount, payment_method, payment_details, proof_url, reference } = req.body;
+  const { amount, payment_method, payment_details, proof_image_url, reference } = req.body;
 
   if (!amount || Number(amount) <= 0) {
     return res.status(400).json({ error: 'Please enter a valid deposit amount' });
@@ -135,7 +135,7 @@ async function createDeposit(req, res) {
       amount: Number(amount),
       payment_method: payment_method || 'bank_transfer',
       payment_details: payment_details || null,
-      proof_url: proof_url || null,
+      proof_image_url: proof_image_url || null,
       reference: reference || `dp_ref_${Date.now()}`,
       status: 'pending',
       created_at: new Date()
