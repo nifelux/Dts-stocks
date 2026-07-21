@@ -17,33 +17,20 @@
     <p class="text-muted" style="margin-bottom:0;">Choose a plan that fits your goals.</p>
   </div>
 
-  <!-- ================= INVESTMENT ================= -->
-  <div class="products-section-label">
-    <h3>Investment</h3>
-    <span class="products-section-badge">Fixed daily income</span>
-  </div>
-  <div class="product-grid" id="products-list">
-    <div class="card">Loading…</div>
+  <div class="segment-tabs">
+    <button class="segment-tab is-active" data-panel="panel-investment">Investment</button>
+    <button class="segment-tab" data-panel="panel-welfare">Welfare</button>
   </div>
 
-  <!-- ================= WELFARE ================= -->
-  <div class="products-section-label">
-    <h3>Welfare</h3>
-    <span class="products-section-badge">Claim at maturity</span>
+  <div id="panel-investment" class="segment-panel is-active">
+    <div class="product-grid" id="products-list">
+      <div class="card">Loading…</div>
+    </div>
   </div>
-  <div id="welfare-gate"></div>
 
-  <!-- ================= MY INVESTMENTS ================= -->
-  <div class="page-header mt-3">
-    <h2>My Investments</h2>
+  <div id="panel-welfare" class="segment-panel">
+    <div id="welfare-gate"></div>
   </div>
-  <div id="my-investments"><div class="card">Loading…</div></div>
-
-  <!-- ================= MY WELFARE PLANS ================= -->
-  <div class="page-header mt-3">
-    <h2>My Welfare Plans</h2>
-  </div>
-  <div id="my-welfare"><div class="card">Loading…</div></div>
 </div>
 
 <div id="footer-container"></div>
@@ -75,6 +62,16 @@ function welfareDailyRatePercent(days) {
 async function getToken() {
   return (await supabase.auth.getSession()).data.session?.access_token;
 }
+
+// ---------------- TABS ----------------
+document.querySelectorAll('.segment-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.segment-tab').forEach(t => t.classList.remove('is-active'));
+    document.querySelectorAll('.segment-panel').forEach(p => p.classList.remove('is-active'));
+    tab.classList.add('is-active');
+    document.getElementById(tab.dataset.panel).classList.add('is-active');
+  });
+});
 
 // ---------------- INVESTMENT ----------------
 async function loadProducts() {
@@ -152,28 +149,6 @@ async function invest(productId, amount) {
   if (!res.ok) return alert(data.error || `Investment failed (status ${res.status}).`);
   alert('Investment successful! It is now active and earning.');
   location.reload();
-}
-
-async function loadMyInvestments() {
-  const user = (await supabase.auth.getUser()).data.user;
-  const { data } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).order('created_at', { ascending: false });
-  const container = document.getElementById('my-investments');
-  if (!data || data.length === 0) {
-    container.innerHTML = '<div class="card">No investments yet — pick a product above to get started.</div>';
-    return;
-  }
-  container.innerHTML = `<div class="card">${data.map(i => {
-    const pct = Math.min(100, Math.round((i.days_elapsed / i.duration_days) * 100));
-    return `
-      <div class="mb-2">
-        <div class="flex items-center" style="justify-content:space-between;">
-          <strong>${i.products?.name || 'Investment'}</strong>
-          <span class="badge badge-${i.status === 'active' ? 'success' : ''}">${i.status.toUpperCase()}</span>
-        </div>
-        <div class="text-muted" style="font-size:0.82rem;">₦${i.amount.toLocaleString()} · Day ${i.days_elapsed}/${i.duration_days} · +₦${i.total_income.toLocaleString()} earned</div>
-        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-      </div>`;
-  }).join('')}</div>`;
 }
 
 // ---------------- WELFARE ----------------
@@ -271,7 +246,7 @@ async function loadWelfareGate() {
         </span>
         <div>
           <h4>Requires an active investment</h4>
-          <p class="text-muted">Welfare plans are only available once you have at least one active investment above.</p>
+          <p class="text-muted">Welfare plans are only available once you have at least one active investment from the Investment tab.</p>
         </div>
       </div>`;
     return;
@@ -284,62 +259,8 @@ async function loadWelfareGate() {
   updateWelfarePreview();
 }
 
-function welfareStatusBadge(plan) {
-  if (plan.status === 'claimed') return '<span class="badge">CLAIMED</span>';
-  const matured = new Date(plan.maturity_date) <= new Date();
-  return matured ? '<span class="badge badge-success">READY TO CLAIM</span>' : '<span class="badge badge-warning">ACTIVE</span>';
-}
-
-async function claimWelfarePlan(id) {
-  const token = await getToken();
-  const res = await fetch('/api/investment?action=claimWelfare', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ id })
-  });
-  const data = await res.json();
-  if (!res.ok) return alert(data.error || 'Could not claim this plan.');
-  alert(`Claimed ₦${Number(data.amount).toLocaleString()}!`);
-  location.reload();
-}
-
-async function loadMyWelfare() {
-  const token = await getToken();
-  const res = await fetch('/api/investment?action=myWelfarePlans', { headers: { Authorization: `Bearer ${token}` } });
-  const data = await res.json();
-  const container = document.getElementById('my-welfare');
-
-  if (!data || data.length === 0) {
-    container.innerHTML = '<div class="card">No Welfare plans yet.</div>';
-    return;
-  }
-
-  container.innerHTML = data.map(plan => {
-    const matured = new Date(plan.maturity_date) <= new Date();
-    const totalProfit = Number(plan.daily_profit) * Number(plan.duration_days);
-    const totalPayout = Number(plan.amount) + totalProfit;
-    return `
-    <div class="card welfare-plan-card mb-2">
-      <span class="welfare-plan-status">${welfareStatusBadge(plan)}</span>
-      <h4>₦${Number(plan.amount).toLocaleString()} · ${plan.duration_days} days</h4>
-      <div class="welfare-plan-meta">Matures ${new Date(plan.maturity_date).toLocaleDateString()} · ${plan.daily_rate_percent}%/day</div>
-      <div class="welfare-plan-figures">
-        <div class="welfare-plan-figure"><div class="value">₦${totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div><div class="label">Total profit</div></div>
-        <div class="welfare-plan-figure"><div class="value">₦${totalPayout.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div><div class="label">Payout at maturity</div></div>
-      </div>
-      ${plan.status === 'active' && matured ? `<button class="btn btn-primary btn-block claim-btn" data-id="${plan.id}">Claim ₦${totalPayout.toLocaleString(undefined, { maximumFractionDigits: 0 })}</button>` : ''}
-    </div>`;
-  }).join('');
-
-  document.querySelectorAll('.claim-btn').forEach(btn => {
-    btn.addEventListener('click', () => claimWelfarePlan(btn.dataset.id));
-  });
-}
-
 loadProducts();
-loadMyInvestments();
 loadWelfareGate();
-loadMyWelfare();
 </script>
 </body>
 </html>
