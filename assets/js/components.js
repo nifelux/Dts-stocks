@@ -7,6 +7,7 @@ async function loadComponents() {
     const headerRes = await fetch('/assets/html/header.html');
     const headerHTML = await headerRes.text();
     document.getElementById('header-container').innerHTML = headerHTML;
+    updateAuthUI();
     initMobileMenu();
   } catch (err) { console.error('Header load failed', err); }
 
@@ -15,14 +16,6 @@ async function loadComponents() {
     const footerHTML = await footerRes.text();
     document.getElementById('footer-container').innerHTML = footerHTML;
   } catch (err) { console.error('Footer load failed', err); }
-
-  // Only resolve auth state (and toggle #tab-bar visibility) after BOTH
-  // header and footer are actually in the DOM. Previously this ran
-  // right after the header loaded, in parallel with the footer fetch —
-  // if auth resolved first, document.getElementById('tab-bar') was null,
-  // the visibility toggle silently no-op'd, and nothing ever retried it
-  // once the footer did load, so the tab bar stayed stuck hidden.
-  updateAuthUI();
 }
 
 // ------------------------------------------------------------
@@ -34,8 +27,8 @@ const NAV_GROUPS_AUTHED = [
   {
     label: 'Invest',
     items: [
-      { label: 'My Investments', href: '/investments.html' },
-      { label: 'Investment Details', href: '/investment-details.html' },
+      { label: 'Products', href: '/investments.html' },
+      { label: 'Investment History', href: '/investment-details.html' },
       { label: 'Daily Earnings', href: '/daily-earnings.html' },
       { label: 'VIP Levels', href: '/vip.html' }
     ]
@@ -214,15 +207,7 @@ async function renderNavFor(user) {
   const supabase = window.supabase;
   const nav = document.getElementById('main-nav');
   const mobileContent = document.getElementById('mobile-menu-content');
-  const tabBar = document.getElementById('tab-bar');
   if (!nav) return;
-
-  // The floating tab bar (Home/Products/Team/KYC/Profile) links to
-  // authenticated-only pages — it's hidden by default in CSS and only
-  // shown once a logged-in user is confirmed, so guest pages never
-  // flash it before hiding it again.
-  if (tabBar) tabBar.classList.toggle('is-visible', !!user);
-  document.body.classList.toggle('has-tab-bar', !!user);
 
   if (user && supabase) {
     const { data: profile } = await supabase
