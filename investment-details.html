@@ -2,12 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Investment Details</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investment History – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 <div id="header-container"></div>
-<div class="section" id="detail"></div>
+
+<div class="section dashboard-page">
+  <div class="page-header">
+    <h2>Investment History</h2>
+    <p class="text-muted" style="margin-bottom:0;">Everything you've invested, active or completed.</p>
+  </div>
+
+  <div class="segment-tabs">
+    <button class="segment-tab is-active" data-panel="panel-investment-history">Investment</button>
+    <button class="segment-tab" data-panel="panel-welfare-history">Welfare</button>
+  </div>
+
+  <div id="panel-investment-history" class="segment-panel is-active">
+    <div id="investment-history"><div class="card">Loading…</div></div>
+  </div>
+
+  <div id="panel-welfare-history" class="segment-panel">
+    <div id="welfare-history"><div class="card">Loading…</div></div>
+  </div>
+</div>
 
 <div id="footer-container"></div>
 <script src="/assets/js/components.js"></script>
@@ -19,23 +41,102 @@ const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhb
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
-(async () => {
-  const id = new URLSearchParams(location.search).get('id');
-  const { data, error } = await supabase.from('investments').select('*, products(*)').eq('id', id).single();
-  if (error || !data) {
-    document.getElementById('detail').innerHTML = '<div class="card">Investment not found.</div>';
+async function getToken() {
+  return (await supabase.auth.getSession()).data.session?.access_token;
+}
+
+// ---------------- TABS ----------------
+document.querySelectorAll('.segment-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.segment-tab').forEach(t => t.classList.remove('is-active'));
+    document.querySelectorAll('.segment-panel').forEach(p => p.classList.remove('is-active'));
+    tab.classList.add('is-active');
+    document.getElementById(tab.dataset.panel).classList.add('is-active');
+  });
+});
+
+// ---------------- INVESTMENT HISTORY ----------------
+async function loadInvestmentHistory() {
+  const user = (await supabase.auth.getUser()).data.user;
+  const { data } = await supabase.from('investments').select('*, products(name)').eq('user_id', user.id).order('created_at', { ascending: false });
+  const container = document.getElementById('investment-history');
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card">No investments yet — pick a product from the Products page to get started.</div>';
     return;
   }
-  document.getElementById('detail').innerHTML = `
-    <div class="card">
-      <h2>${data.products?.name || 'Investment'}</h2>
-      <p>Invested: ₦${data.amount.toLocaleString()}</p>
-      <p>Daily ROI: ₦${data.daily_income.toLocaleString()}</p>
-      <p>Earned: ₦${data.total_income.toLocaleString()}</p>
-      <p>Status: ${data.status}</p>
-      <a href="/investments.html" class="btn btn-outline btn-sm mt-1">Back to Investments</a>
+
+  container.innerHTML = data.map(i => {
+    const pct = Math.min(100, Math.round((i.days_elapsed / i.duration_days) * 100));
+    return `
+    <div class="card history-card mb-2">
+      <span class="history-card-status"><span class="badge badge-${i.status === 'active' ? 'success' : ''}">${i.status.toUpperCase()}</span></span>
+      <div class="history-card-title">${i.products?.name || 'Investment'}</div>
+      <div class="history-card-meta">₦${Number(i.amount).toLocaleString()} · Day ${i.days_elapsed}/${i.duration_days}</div>
+      <div class="history-card-figures">
+        <div class="history-card-figure"><div class="value">₦${Number(i.daily_income).toLocaleString()}</div><div class="label">Daily income</div></div>
+        <div class="history-card-figure"><div class="value">₦${Number(i.total_income).toLocaleString()}</div><div class="label">Earned so far</div></div>
+      </div>
+      <div class="progress-track mt-2"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>`;
-})();
+  }).join('');
+}
+
+// ---------------- WELFARE HISTORY ----------------
+function welfareStatusBadge(plan) {
+  if (plan.status === 'claimed') return '<span class="badge">CLAIMED</span>';
+  const matured = new Date(plan.maturity_date) <= new Date();
+  return matured ? '<span class="badge badge-success">READY TO CLAIM</span>' : '<span class="badge badge-warning">ACTIVE</span>';
+}
+
+async function claimWelfarePlan(id) {
+  const token = await getToken();
+  const res = await fetch('/api/investment?action=claimWelfare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id })
+  });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Could not claim this plan.');
+  alert(`Claimed ₦${Number(data.amount).toLocaleString()}!`);
+  location.reload();
+}
+
+async function loadWelfareHistory() {
+  const token = await getToken();
+  const res = await fetch('/api/investment?action=myWelfarePlans', { headers: { Authorization: `Bearer ${token}` } });
+  const data = await res.json();
+  const container = document.getElementById('welfare-history');
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card">No Welfare plans yet — start one from the Products page.</div>';
+    return;
+  }
+
+  container.innerHTML = data.map(plan => {
+    const matured = new Date(plan.maturity_date) <= new Date();
+    const totalProfit = Number(plan.daily_profit) * Number(plan.duration_days);
+    const totalPayout = Number(plan.amount) + totalProfit;
+    return `
+    <div class="card history-card mb-2">
+      <span class="history-card-status">${welfareStatusBadge(plan)}</span>
+      <div class="history-card-title">₦${Number(plan.amount).toLocaleString()} · ${plan.duration_days} days</div>
+      <div class="history-card-meta">Matures ${new Date(plan.maturity_date).toLocaleDateString()} · ${plan.daily_rate_percent}%/day</div>
+      <div class="history-card-figures">
+        <div class="history-card-figure"><div class="value">₦${totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div><div class="label">Total profit</div></div>
+        <div class="history-card-figure"><div class="value">₦${totalPayout.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div><div class="label">Payout at maturity</div></div>
+      </div>
+      ${plan.status === 'active' && matured ? `<button class="btn btn-primary btn-block claim-btn mt-2" data-id="${plan.id}">Claim ₦${totalPayout.toLocaleString(undefined, { maximumFractionDigits: 0 })}</button>` : ''}
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.claim-btn').forEach(btn => {
+    btn.addEventListener('click', () => claimWelfarePlan(btn.dataset.id));
+  });
+}
+
+loadInvestmentHistory();
+loadWelfareHistory();
 </script>
 </body>
 </html>
