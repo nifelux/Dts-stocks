@@ -207,7 +207,14 @@ async function renderNavFor(user) {
   const supabase = window.supabase;
   const nav = document.getElementById('main-nav');
   const mobileContent = document.getElementById('mobile-menu-content');
+  const tabBar = document.getElementById('tab-bar');
   if (!nav) return;
+
+  // The floating tab bar (Home/Products/Team/KYC/Profile) links to
+  // authenticated-only pages — hide it entirely for guests instead of
+  // showing shortcuts that just redirect to login.
+  if (tabBar) tabBar.style.display = user ? 'flex' : 'none';
+  document.body.classList.toggle('has-tab-bar', !!user);
 
   if (user && supabase) {
     const { data: profile } = await supabase
@@ -304,3 +311,4 @@ function initMobileMenu() {
 }
 
 document.addEventListener('DOMContentLoaded', loadComponents);
+  
