@@ -211,9 +211,10 @@ async function renderNavFor(user) {
   if (!nav) return;
 
   // The floating tab bar (Home/Products/Team/KYC/Profile) links to
-  // authenticated-only pages — hide it entirely for guests instead of
-  // showing shortcuts that just redirect to login.
-  if (tabBar) tabBar.style.display = user ? 'flex' : 'none';
+  // authenticated-only pages — it's hidden by default in CSS and only
+  // shown once a logged-in user is confirmed, so guest pages never
+  // flash it before hiding it again.
+  if (tabBar) tabBar.classList.toggle('is-visible', !!user);
   document.body.classList.toggle('has-tab-bar', !!user);
 
   if (user && supabase) {
@@ -311,4 +312,4 @@ function initMobileMenu() {
 }
 
 document.addEventListener('DOMContentLoaded', loadComponents);
-  
+    
