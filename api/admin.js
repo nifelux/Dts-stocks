@@ -22,6 +22,12 @@ export default async function handler(req, res) {
         return await approveDeposit(req, res);
       case 'rejectDeposit':
         return await rejectDeposit(req, res);
+      case 'kycList':
+        return await kycList(req, res);
+      case 'approveKYC':
+        return await approveKYC(req, res);
+      case 'rejectKYC':
+        return await rejectKYC(req, res);
       default:
         return res.status(400).json({ error: `Invalid or missing admin action: '${action}'` });
     }
@@ -337,5 +343,114 @@ async function rejectDeposit(req, res) {
   );
 
   return res.status(200).json({ message: 'Deposit rejected successfully' });
+}
+
+/**
+ * List all KYC documents for admin review, with each private storage
+ * path resolved to a short-lived signed URL (service_role — the bucket
+ * itself has no public access).
+ */
+async function kycList(req, res) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return res.status(403).json({ error: 'Forbidden: Admin access required' });
+
+  const { data: docs, error } = await supabaseAdmin
+    .from('kyc_documents')
+    .select('*, profiles(email)')
+    .order('submitted_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const withSignedUrls = await Promise.all(
+    (docs || []).map(async (doc) => {
+      const { data: signed } = await supabaseAdmin.storage
+        .from('kyc')
+        .createSignedUrl(doc.image_url, 300); // 5 minutes
+      return { ...doc, signedUrl: signed?.signedUrl || null };
+    })
+  );
+
+  return res.status(200).json(withSignedUrls);
+}
+
+/**
+ * Approve a KYC document and mark the user's profile verified.
+ */
+async function approveKYC(req, res) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return res.status(403).json({ error: 'Forbidden: Admin access required' });
+
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+
+  const { data: doc, error: fetchErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .select('user_id')
+    .eq('id', id)
+    .single();
+  if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' });
+
+  const { error: docErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+    .eq('id', id);
+  if (docErr) return res.status(500).json({ error: docErr.message });
+
+  const { error: profileErr } = await supabaseAdmin
+    .from('profiles')
+    .update({ kyc_status: 'approved', updated_at: new Date().toISOString() })
+    .eq('id', doc.user_id);
+  if (profileErr) return res.status(500).json({ error: profileErr.message });
+
+  await sendTelegramMessage(
+    `✅ *KYC Approved*\n` +
+    `Document: \`${id}\`\n` +
+    `User ID: \`${doc.user_id}\``
+  );
+
+  return res.status(200).json({ message: 'KYC approved' });
+}
+
+/**
+ * Reject a KYC document with a reason shown to the user.
+ */
+async function rejectKYC(req, res) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return res.status(403).json({ error: 'Forbidden: Admin access required' });
+
+  const { id, reason } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+
+  const { data: doc, error: fetchErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .select('user_id')
+    .eq('id', id)
+    .single();
+  if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' });
+
+  const { error: docErr } = await supabaseAdmin
+    .from('kyc_documents')
+    .update({
+      status: 'rejected',
+      admin_notes: reason || null,
+      reviewed_at: new Date().toISOString()
+    })
+    .eq('id', id);
+  if (docErr) return res.status(500).json({ error: docErr.message });
+
+  const { error: profileErr } = await supabaseAdmin
+    .from('profiles')
+    .update({ kyc_status: 'rejected', updated_at: new Date().toISOString() })
+    .eq('id', doc.user_id);
+  if (profileErr) return res.status(500).json({ error: profileErr.message });
+
+  await sendTelegramMessage(
+    `❌ *KYC Rejected*\n` +
+    `Document: \`${id}\`\n` +
+    `User ID: \`${doc.user_id}\`\n` +
+    `Reason: ${reason || 'N/A'}`
+  );
+
+  return res.status(200).json({ message: 'KYC rejected' });
 }
   
