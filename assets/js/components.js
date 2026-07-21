@@ -7,7 +7,6 @@ async function loadComponents() {
     const headerRes = await fetch('/assets/html/header.html');
     const headerHTML = await headerRes.text();
     document.getElementById('header-container').innerHTML = headerHTML;
-    updateAuthUI();
     initMobileMenu();
   } catch (err) { console.error('Header load failed', err); }
 
@@ -16,6 +15,14 @@ async function loadComponents() {
     const footerHTML = await footerRes.text();
     document.getElementById('footer-container').innerHTML = footerHTML;
   } catch (err) { console.error('Footer load failed', err); }
+
+  // Only resolve auth state (and toggle #tab-bar visibility) after BOTH
+  // header and footer are actually in the DOM. Previously this ran
+  // right after the header loaded, in parallel with the footer fetch —
+  // if auth resolved first, document.getElementById('tab-bar') was null,
+  // the visibility toggle silently no-op'd, and nothing ever retried it
+  // once the footer did load, so the tab bar stayed stuck hidden.
+  updateAuthUI();
 }
 
 // ------------------------------------------------------------
@@ -312,4 +319,3 @@ function initMobileMenu() {
 }
 
 document.addEventListener('DOMContentLoaded', loadComponents);
-    
