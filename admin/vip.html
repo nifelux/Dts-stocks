@@ -52,14 +52,22 @@
     }
     window.openAdd = () => { document.getElementById('vip-modal').classList.add('active'); };
     window.closeModal = () => { document.getElementById('vip-modal').classList.remove('active'); };
+    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
     window.addVIP = async () => {
-      await supabase.from('vip_levels').insert({
-        level: document.getElementById('v-level').value,
-        min_deposit: +document.getElementById('v-dep').value,
-        min_investments: +document.getElementById('v-inv').value,
-        min_referrals: +document.getElementById('v-ref').value,
-        daily_bonus_percent: +document.getElementById('v-bonus').value
+      const token = await getToken();
+      const res = await fetch('/api/admin?action=createVipLevel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          level: document.getElementById('v-level').value,
+          min_deposit: +document.getElementById('v-dep').value,
+          min_investments: +document.getElementById('v-inv').value,
+          min_referrals: +document.getElementById('v-ref').value,
+          daily_bonus_percent: +document.getElementById('v-bonus').value
+        })
       });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed to save VIP level'); return; }
       closeModal();
       load();
     };
