@@ -39,8 +39,20 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
+    async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
+    async function apiCall(action, options = {}) {
+      const token = await getToken();
+      const res = await fetch(`/api/admin?action=${action}`, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      return data;
+    }
+
     async function loadAdmins() {
-      const { data } = await supabase.from('profiles').select('id, email, full_name').eq('is_admin', true);
+      const data = await apiCall('listAdmins');
       document.getElementById('admins-list').innerHTML = data.map(u => `
         <div class="card mb-1"><strong>${u.full_name || u.email}</strong> (${u.id.slice(0,8)}...)</div>
       `).join('') || 'No admins found';
@@ -48,10 +60,13 @@
     window.promote = async () => {
       const userId = document.getElementById('user-id').value.trim();
       if (!userId) return alert('Enter a User ID');
-      const { error } = await supabase.from('profiles').update({ is_admin: true }).eq('id', userId);
-      if (error) return alert(error.message);
-      alert('User promoted to admin');
-      loadAdmins();
+      try {
+        await apiCall('promoteAdmin', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+        alert('User promoted to admin');
+        loadAdmins();
+      } catch (err) {
+        alert(err.message);
+      }
     };
     loadAdmins();
   </script>
