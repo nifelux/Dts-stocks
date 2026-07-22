@@ -77,7 +77,7 @@
 
     async function apiCall(action, options = {}) {
       const token = await getToken();
-      const res = await fetch(`/api/admin?action=${action}`, {
+      const res = await fetch(`/api/investment?action=${action}`, {
         ...options,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) }
       });
@@ -89,7 +89,7 @@
     async function load() {
       const tbody = document.querySelector('#products-table tbody');
       try {
-        const data = await apiCall('productsList');
+        const data = await apiCall('products');
         if (!data || data.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7">No products yet.</td></tr>';
           return;
@@ -135,9 +135,10 @@
       }
 
       if (toggleId) {
+        const p = window.__products.find(x => x.id === toggleId);
         e.target.disabled = true;
         try {
-          await apiCall('toggleProductLock', { method: 'POST', body: JSON.stringify({ id: toggleId }) });
+          await apiCall('toggleLock', { method: 'POST', body: JSON.stringify({ id: toggleId, is_locked: !p.is_locked }) });
           load();
         } catch (err) {
           alert(err.message);
@@ -166,10 +167,11 @@
         id: id || undefined,
         name: document.getElementById('name').value,
         description: document.getElementById('description').value,
-        price: +document.getElementById('price').value,
-        daily_income: +document.getElementById('daily_income').value,
+        min_invest: +document.getElementById('price').value,
+        max_invest: +document.getElementById('price').value,
+        daily_income_amount: +document.getElementById('daily_income').value,
         duration_days: +document.getElementById('duration_days').value,
-        max_purchases: document.getElementById('max_purchases').value ? +document.getElementById('max_purchases').value : null
+        max_purchases_per_user: document.getElementById('max_purchases').value ? +document.getElementById('max_purchases').value : null
       };
 
       try {
