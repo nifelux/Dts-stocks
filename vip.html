@@ -2,14 +2,75 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>VIP Levels</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP Program – DTL Stocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .tier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;margin-top:1.75rem}
+  .tier-card{
+    background:var(--clr-card);border:1px solid var(--clr-border);border-radius:var(--radius-lg);
+    padding:1.5rem;position:relative;transition:transform var(--transition),box-shadow var(--transition);
+  }
+  .tier-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .tier-card.is-current{border-color:var(--clr-purple);box-shadow:0 0 0 3px rgba(124,92,255,0.15)}
+  .tier-current-tag{
+    position:absolute;top:-11px;right:1.25rem;background:var(--gradient-purple);color:#fff;
+    font-size:0.68rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;
+    padding:0.25rem 0.7rem;border-radius:999px;
+  }
+  .tier-icon{
+    width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:1rem;
+  }
+  .tier-icon svg{width:24px;height:24px}
+  .tier-icon.tone-bronze{background:#F3E7DA;color:#8A5A2B}
+  .tier-icon.tone-silver{background:#EAEAEE;color:#5B5B6B}
+  .tier-icon.tone-gold{background:#FFF3D6;color:var(--clr-yellow-deep)}
+  .tier-icon.tone-platinum{background:#EDE7FF;color:var(--clr-purple-deep)}
+  .tier-name{font-family:var(--font-display);font-weight:600;font-size:1.3rem;text-transform:capitalize;margin-bottom:0.2rem}
+  .tier-bonus{font-size:0.85rem;color:var(--clr-green-deep);font-weight:700;margin-bottom:1rem}
+  .tier-reqs{display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;font-size:0.83rem;color:var(--clr-text-secondary)}
+  .tier-reqs span{color:var(--clr-text);font-weight:600}
+  .tier-benefits{list-style:none;padding:0;margin:0;font-size:0.85rem;display:flex;flex-direction:column;gap:0.45rem}
+  .tier-benefits li{display:flex;align-items:flex-start;gap:0.5rem}
+  .tier-benefits li svg{width:15px;height:15px;flex-shrink:0;margin-top:0.15rem;color:var(--clr-green-deep)}
+
+  .status-progress{margin-top:1.5rem;position:relative;z-index:1}
+  .status-progress-row{margin-bottom:1.1rem}
+  .status-progress-label{display:flex;justify-content:space-between;font-size:0.8rem;color:rgba(255,255,255,0.75);margin-bottom:0.35rem}
+  .status-progress-label strong{color:#fff}
+</style>
 </head>
 <body>
 <div id="header-container"></div>
-<div class="section">
-  <h2>VIP Program</h2>
-  <div class="grid-3" id="vip"></div>
+
+<div class="section dashboard-page">
+  <div class="page-header">
+    <div class="dashboard-eyebrow">Loyalty Rewards</div>
+    <h2>VIP Program</h2>
+    <p class="text-muted" style="margin-bottom:0;">Unlock better bonuses and perks as you grow with us.</p>
+  </div>
+
+  <!-- Current status hero -->
+  <div class="balance-card animate-fade" id="status-card" style="display:none;">
+    <div class="balance-card-top">
+      <span class="balance-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></svg>
+        Your Current Tier
+      </span>
+      <div class="balance-amount" id="current-tier-name" style="font-size:2.1rem; text-transform:capitalize;">Bronze</div>
+    </div>
+
+    <div class="status-progress" id="next-tier-progress"></div>
+
+    <div class="vip-strip" id="vip-strip"></div>
+  </div>
+
+  <!-- Tier cards -->
+  <div class="tier-grid" id="vip">
+    <div class="card">Loading tiers…</div>
+  </div>
 </div>
 
 <div id="footer-container"></div>
@@ -22,15 +83,104 @@ const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhb
 // the logged-in session — without this it always shows the guest menu.
 window.supabase = supabase;
 
-(async () => {
-  const { data } = await supabase.from('vip_levels').select('*').order('min_deposit', { ascending: true });
-  document.getElementById('vip').innerHTML = data?.map(v => `
-    <div class="card">
-      <h3>${v.level}</h3>
-      <p>Min Deposit: ₦${v.min_deposit.toLocaleString()}</p>
-    </div>
-  `).join('') || 'No VIP levels available.';
-})();
+const TIER_ICON = {
+  bronze:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9.34 13.5 6 22l6-3 6 3-3.34-8.5"/></svg>',
+  silver:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9.34 13.5 6 22l6-3 6 3-3.34-8.5"/></svg>',
+  gold:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M5 9a4 4 0 0 1-2-3.5V4h4"/><path d="M19 9a4 4 0 0 0 2-3.5V4h-4"/></svg>',
+  platinum: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></svg>'
+};
+const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum'];
+
+function checkIcon() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+}
+
+function renderVipStrip(currentLevel) {
+  document.getElementById('vip-strip').innerHTML = TIER_ORDER.map(l =>
+    `<span class="vip-chip ${l === currentLevel ? 'is-active' : ''}">${l}</span>`
+  ).join('');
+}
+
+async function loadVIP() {
+  const { data: tiers } = await supabase.from('vip_levels').select('*').order('min_deposit', { ascending: true });
+  const container = document.getElementById('vip');
+
+  if (!tiers || tiers.length === 0) {
+    container.innerHTML = '<div class="card text-muted">No VIP tiers configured yet.</div>';
+    return;
+  }
+
+  // Try to load the current user's status — page still works for a
+  // logged-out visitor, just without the status hero / progress bars.
+  const { data: { user } } = await supabase.auth.getUser();
+  let currentLevel = null, totalDep = 0, invCount = 0, refCount = 0;
+
+  if (user) {
+    const [{ data: profile }, { data: wallet }, { data: investments }, { data: rewards }] = await Promise.all([
+      supabase.from('profiles').select('vip_level').eq('id', user.id).single(),
+      supabase.from('wallets').select('total_deposited').eq('user_id', user.id).single(),
+      supabase.from('investments').select('id').eq('user_id', user.id).in('status', ['active', 'completed']),
+      supabase.from('referral_rewards').select('referred_user_id').eq('referrer_id', user.id)
+    ]);
+    currentLevel = profile?.vip_level || 'bronze';
+    totalDep = wallet?.total_deposited || 0;
+    invCount = investments?.length || 0;
+    refCount = new Set((rewards || []).map(r => r.referred_user_id)).size;
+
+    document.getElementById('status-card').style.display = 'block';
+    document.getElementById('current-tier-name').textContent = currentLevel;
+    renderVipStrip(currentLevel);
+
+    const currentIndex = TIER_ORDER.indexOf(currentLevel);
+    const nextTier = tiers.find(t => TIER_ORDER.indexOf(t.level) === currentIndex + 1);
+    const progressWrap = document.getElementById('next-tier-progress');
+
+    if (nextTier) {
+      const rows = [
+        { label: 'Deposited', have: totalDep, need: nextTier.min_deposit, fmt: v => '₦' + v.toLocaleString() },
+        { label: 'Investments', have: invCount, need: nextTier.min_investments, fmt: v => v },
+        { label: 'Referrals', have: refCount, need: nextTier.min_referrals, fmt: v => v }
+      ];
+      progressWrap.innerHTML = `
+        <div class="status-progress-label" style="margin-bottom:0.75rem;">
+          <span>Progress to <strong style="text-transform:capitalize;">${nextTier.level}</strong></span>
+        </div>
+        ${rows.map(r => {
+          const pct = r.need > 0 ? Math.min(100, Math.round((r.have / r.need) * 100)) : 100;
+          return `
+          <div class="status-progress-row">
+            <div class="status-progress-label"><span>${r.label}</span><strong>${r.fmt(r.have)} / ${r.fmt(r.need)}</strong></div>
+            <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          </div>`;
+        }).join('')}
+      `;
+    } else {
+      progressWrap.innerHTML = `<div class="status-progress-label"><span>You've reached the highest tier 🎉</span></div>`;
+    }
+  }
+
+  container.innerHTML = tiers.map(v => {
+    const benefits = Array.isArray(v.benefits) ? v.benefits : (v.benefits ? JSON.parse(v.benefits) : []);
+    const isCurrent = v.level === currentLevel;
+    return `
+    <div class="tier-card ${isCurrent ? 'is-current' : ''}">
+      ${isCurrent ? '<span class="tier-current-tag">Your Tier</span>' : ''}
+      <span class="tier-icon tone-${v.level}">${TIER_ICON[v.level] || TIER_ICON.bronze}</span>
+      <div class="tier-name">${v.level}</div>
+      <div class="tier-bonus">+${v.daily_bonus_percent}% daily bonus</div>
+      <div class="tier-reqs">
+        <div>Min deposit: <span>₦${Number(v.min_deposit).toLocaleString()}</span></div>
+        <div>Min investments: <span>${v.min_investments}</span></div>
+        <div>Min referrals: <span>${v.min_referrals}</span></div>
+      </div>
+      <ul class="tier-benefits">
+        ${benefits.map(b => `<li>${checkIcon()}<span>${b}</span></li>`).join('') || '<li class="text-muted">Standard platform access</li>'}
+      </ul>
+    </div>`;
+  }).join('');
+}
+
+loadVIP();
 </script>
 </body>
 </html>
