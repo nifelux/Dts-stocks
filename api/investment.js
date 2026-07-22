@@ -26,6 +26,10 @@ export default async function handler(req, res) {
       case 'updateProduct': return updateProduct(req, res);
       case 'deleteProduct': return deleteProduct(req, res);
       case 'toggleLock': return toggleLock(req, res);
+      // Cron (daily income) — called by Vercel's scheduled cron via
+      // CRON_SECRET, or manually by an admin via the admin panel
+      case 'triggerDailyIncome': return triggerDailyIncome(req, res);
+      case 'cronStatus': return cronStatus(req, res);
       default: return res.status(400).json({ error: 'Invalid action' });
     }
   } catch (err) {
@@ -337,5 +341,108 @@ async function toggleLock(req, res) {
   const { id, is_locked } = req.body;
   await supabaseAdmin.from('products').update({ is_locked }).eq('id', id);
   return res.status(200).json({ message: `Product ${is_locked ? 'locked' : 'unlocked'}` });
-                                 }
-    
+}
+
+/* ============================================================
+   DAILY INCOME CRON
+   ============================================================
+   IMPORTANT: as of this fix, nothing was ever actually running this on
+   a schedule — there was no /api/cron.js and no `crons` entry in
+   vercel.json, so active investments' daily income was never being
+   paid out automatically. This adds both: the processing action here,
+   plus a `crons` entry in vercel.json calling it once daily.
+*/
+
+// Authorizes either Vercel's scheduled cron (via a shared secret) or a
+// logged-in admin clicking "Run Now" in the admin panel. Throws if
+// neither check passes, same convention as verifyAdmin/verifyUser.
+async function verifyCronOrAdmin(req) {
+  const authHeader = req.headers.authorization || '';
+  const providedSecret = authHeader.replace('Bearer ', '');
+  if (process.env.CRON_SECRET && providedSecret === process.env.CRON_SECRET) {
+    return { via: 'cron' };
+  }
+  const admin = await verifyAdmin(req);
+  return { via: 'admin', admin };
+}
+
+async function triggerDailyIncome(req, res) {
+  let auth;
+  try {
+    auth = await verifyCronOrAdmin(req);
+  } catch (err) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // Idempotency: only pick up investments not already paid today. This
+  // makes it safe to call this endpoint more than once on the same day
+  // (e.g. an admin clicking "Run Now" right after the scheduled cron
+  // already ran) without double-paying anyone.
+  const { data: dueInvestments, error: fetchErr } = await supabaseAdmin
+    .from('investments')
+    .select('*')
+    .eq('status', 'active')
+    .or(`last_income_date.is.null,last_income_date.lt.${today}`);
+
+  if (fetchErr) {
+    await supabaseAdmin.from('cron_logs').insert({ job_name: 'daily_income', status: 'failed', details: { error: fetchErr.message } });
+    return res.status(500).json({ error: fetchErr.message });
+  }
+
+  let paidCount = 0;
+  let completedCount = 0;
+  let failedCount = 0;
+  const failures = [];
+
+  for (const inv of dueInvestments || []) {
+    try {
+      const newDaysElapsed = Number(inv.days_elapsed) + 1;
+      const newTotalIncome = Number(inv.total_income) + Number(inv.daily_income);
+      const isComplete = newDaysElapsed >= Number(inv.duration_days);
+
+      // Credit the day's income via a transaction row — same reasoning
+      // as everywhere else in this codebase: trg_process_transaction is
+      // the only thing that should ever touch wallets.balance. A unique
+      // reference per investment per day also gives a second layer of
+      // idempotency beyond the last_income_date check above.
+      const { error: txnErr } = await supabaseAdmin.from('transactions').insert({
+        user_id: inv.user_id,
+        type: 'earning',
+        amount: Number(inv.daily_income),
+        status: 'approved',
+        reference: `inv_income_${inv.id}_day${newDaysElapsed}`
+      });
+      if (txnErr && !txnErr.message.includes('duplicate')) throw txnErr;
+
+      await supabaseAdmin.from('investments').update({
+        days_elapsed: newDaysElapsed,
+        total_income: newTotalIncome,
+        last_income_date: today,
+        status: isComplete ? 'completed' : 'active'
+      }).eq('id', inv.id);
+
+      paidCount++;
+      if (isComplete) completedCount++;
+    } catch (err) {
+      failedCount++;
+      failures.push({ investment_id: inv.id, error: err.message });
+    }
+  }
+
+  await supabaseAdmin.from('cron_logs').insert({
+    job_name: 'daily_income',
+    status: failedCount > 0 ? 'partial_failure' : 'success',
+    details: { paidCount, completedCount, failedCount, failures, triggeredBy: auth.via }
+  });
+
+  return res.status(200).json({ message: 'Daily income processed', paidCount, completedCount, failedCount });
+}
+
+async function cronStatus(req, res) {
+  await verifyAdmin(req);
+  const { data, error } = await supabaseAdmin.from('cron_logs').select('*').order('created_at', { ascending: false }).limit(30);
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json(data);
+}
