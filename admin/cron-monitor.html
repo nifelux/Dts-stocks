@@ -35,7 +35,7 @@
     async function getToken() { return (await supabase.auth.getSession()).data.session?.access_token; }
     async function load() {
       const token = await getToken();
-      const res = await fetch('/api/cron?action=status', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/api/investment?action=cronStatus', { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       document.getElementById('logs').innerHTML = data.map(l => `
         <div class="card mb-1">${l.job_name} – <span class="badge ${l.status === 'success' ? 'badge-success' : l.status === 'failed' ? 'badge-danger' : 'badge-warning'}">${l.status}</span> ${new Date(l.created_at).toLocaleString()}</div>
@@ -43,7 +43,7 @@
     }
     window.triggerDaily = async () => {
       const token = await getToken();
-      await fetch('/api/cron?action=triggerDailyIncome', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      await fetch('/api/investment?action=triggerDailyIncome', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       alert('Daily income triggered');
       load();
     };
