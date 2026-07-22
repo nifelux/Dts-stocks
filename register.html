@@ -1,98 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Register – DTL Stocks</title>
-<link rel="stylesheet" href="assets/css/style.css">
-<style>
-.auth-container { max-width: 450px; margin: 3rem auto; padding: 2rem; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – DTL Stocks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    #page-content{visibility:hidden}
+    .auth-wrap{max-width:420px;margin:3rem auto;padding:0 1.25rem 3rem;}
+    .auth-hero-icon{
+      width:56px;height:56px;border-radius:16px;background:var(--gradient-purple);color:#fff;
+      display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;
+      box-shadow:0 10px 24px -10px rgba(76,52,176,0.5);
+    }
+    .auth-hero-icon svg{width:26px;height:26px}
+    .auth-title{font-family:var(--font-display);font-weight:600;font-size:1.7rem;text-align:center;color:var(--clr-purple-ink);margin-bottom:0.3rem}
+    .auth-subtitle{text-align:center;color:var(--clr-text-secondary);font-size:0.92rem;margin-bottom:1.75rem}
+  </style>
 </head>
 <body>
-<div id="header-container"></div>
+  <div id="header-container"></div>
 
-<div class="auth-container card">
-<h2 class="text-center">Create Account</h2>
-<div id="error-alert" class="alert alert-danger" style="display:none;"></div>
-<div id="success-alert" class="alert alert-success" style="display:none;"></div>
-<form id="register-form">
-<div class="form-group">
-<label class="form-label">Full Name</label>
-<input type="text" id="full_name" class="form-input" required>
-</div>
-<div class="form-group">
-<label class="form-label">Email</label>
-<input type="email" id="email" class="form-input" required>
-</div>
-<div class="form-group">
-<label class="form-label">Password</label>
-<input type="password" id="password" class="form-input" required minlength="6">
-</div>
-<div class="form-group">
-<label class="form-label">Referral Code (optional)</label>
-<input type="text" id="referral_code" class="form-input">
-</div>
-<button type="submit" class="btn btn-primary btn-block">Register</button>
-</form>
-<p class="text-center mt-2">Already have an account? <a href="login.html">Login</a></p>
-</div>
+  <div id="page-content">
+    <div class="auth-wrap">
+      <span class="auth-hero-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+      </span>
+      <h2 class="auth-title">Create Account</h2>
+      <p class="auth-subtitle">Start growing your wealth with DTL Stocks.</p>
 
-<div id="footer-container"></div>
-<script src="/assets/js/components.js"></script>
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
-window.supabase = supabase;
+      <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
+      <div id="success-alert" class="alert alert-success" style="display:none;"></div>
 
-// Pre-fill from ?ref=CODE links (e.g. from referral.html's share link)
-const urlRef = new URLSearchParams(location.search).get('ref');
-if (urlRef) document.getElementById('referral_code').value = urlRef;
+      <form id="register-form" class="card form-card">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="full_name" class="form-input" required autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="email" class="form-input" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-input" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Referral Code (optional)</label>
+          <input type="text" id="referral_code" class="form-input">
+        </div>
+        <button type="submit" id="register-btn" class="btn btn-primary btn-block" style="margin-top:1.5rem;">Register</button>
+      </form>
 
-document.getElementById('register-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const full_name = document.getElementById('full_name').value;
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const referralCode = document.getElementById('referral_code').value.trim();
-  const errorDiv = document.getElementById('error-alert');
-  const successDiv = document.getElementById('success-alert');
-  errorDiv.style.display = 'none';
-  successDiv.style.display = 'none';
+      <p class="text-center mt-2">Already have an account? <a href="login.html">Login</a></p>
+    </div>
+  </div>
 
-  // Validate referral code via RPC (direct table lookups are blocked by
-  // RLS for anonymous visitors, and a public SELECT policy on profiles
-  // would leak every user's data — see fix-referral-code-validation.sql)
-  let referred_by = null;
-  if (referralCode) {
-    const { data: referrerId, error: refErr } = await supabase.rpc('validate_referral_code', { p_code: referralCode });
-    if (refErr || !referrerId) {
-      errorDiv.textContent = 'Invalid referral code';
-      errorDiv.style.display = 'block';
-      return;
-    }
-    referred_by = referrerId;
-  }
+  <div id="footer-container"></div>
+  <script src="/assets/js/components.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
+    window.supabase = supabase;
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name } }
-  });
-  if (error) {
-    errorDiv.textContent = error.message;
-    errorDiv.style.display = 'block';
-    return;
-  }
+    // Pre-fill from ?ref=CODE links (e.g. from referral.html's share link)
+    const urlRef = new URLSearchParams(location.search).get('ref');
+    if (urlRef) document.getElementById('referral_code').value = urlRef;
 
-  if (referred_by) {
-    await supabase.from('profiles').update({ referred_by }).eq('id', data.user.id);
-  }
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const full_name = document.getElementById('full_name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const referralCode = document.getElementById('referral_code').value.trim();
+      const errorDiv = document.getElementById('error-alert');
+      const successDiv = document.getElementById('success-alert');
+      const btn = document.getElementById('register-btn');
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
 
-  successDiv.textContent = 'Registration successful! Check your email to confirm your account (if enabled).';
-  successDiv.style.display = 'block';
-  setTimeout(() => { window.location.href = 'login.html'; }, 3000);
-});
-</script>
+      // Validate referral code via RPC (direct table lookups are blocked
+      // by RLS for anonymous visitors, and a public SELECT policy on
+      // profiles would leak every user's data)
+      let referred_by = null;
+      if (referralCode) {
+        const { data: referrerId, error: refErr } = await supabase.rpc('validate_referral_code', { p_code: referralCode });
+        if (refErr || !referrerId) {
+          errorDiv.textContent = 'Invalid referral code';
+          errorDiv.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Register';
+          return;
+        }
+        referred_by = referrerId;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name } }
+      });
+      if (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Register';
+        return;
+      }
+
+      if (referred_by) {
+        await supabase.from('profiles').update({ referred_by }).eq('id', data.user.id);
+      }
+
+      successDiv.textContent = 'Registration successful! Check your email to confirm your account (if enabled).';
+      successDiv.style.display = 'block';
+      btn.textContent = 'Redirecting…';
+      setTimeout(() => { window.location.href = 'login.html'; }, 3000);
+    });
+
+    // Guest-only page — an already-logged-in visitor shouldn't see the
+    // registration form, send them straight to their dashboard.
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+      document.getElementById('page-content').style.visibility = 'visible';
+    })();
+  </script>
 </body>
 </html>
