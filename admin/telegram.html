@@ -38,10 +38,16 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const supabase = createClient('https://jytmnukzvxirnafukbck.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dG1udWt6dnhpcm5hZnVrYmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjQ3MjUsImV4cCI6MjA5OTc0MDcyNX0.ZvGUPTW7dJ3UxL2N1TW0lBCe3H4559HaUEhks7vEbEw');
     (async () => {
-      const { data: settings } = await supabase.from('settings').select('*').eq('key', 'telegram').single();
-      document.getElementById('chat-ids').textContent = settings?.value?.admin_chat_ids?.join(', ') || 'Not set';
-      const { data: logs } = await supabase.from('telegram_logs').select('*').order('created_at', { ascending: false }).limit(20);
-      document.getElementById('telegram-logs').innerHTML = logs?.map(l => `
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+
+      const settingsRes = await fetch('/api/admin?action=settingsGet', { headers: { Authorization: `Bearer ${token}` } });
+      const settings = await settingsRes.json();
+      const telegramSetting = settings.find?.(s => s.key === 'telegram')?.value;
+      document.getElementById('chat-ids').textContent = telegramSetting?.admin_chat_ids?.join(', ') || 'Not set';
+
+      const logsRes = await fetch('/api/admin?action=telegramLogs', { headers: { Authorization: `Bearer ${token}` } });
+      const logs = await logsRes.json();
+      document.getElementById('telegram-logs').innerHTML = logs?.map?.(l => `
         <div class="card mb-1">
           <small>${new Date(l.created_at).toLocaleString()}</small> – ${l.event_type}: ${l.message} 
           <span class="badge ${l.success ? 'badge-success' : 'badge-danger'}">${l.success ? 'OK' : 'Failed'}</span>
