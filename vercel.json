@@ -6,5 +6,11 @@
     }
   },
   "outputDirectory": ".",
-  "buildCommand": ""
+  "buildCommand": "",
+  "crons": [
+    {
+      "path": "/api/investment?action=triggerDailyIncome",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }
