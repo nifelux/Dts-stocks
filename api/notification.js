@@ -12,7 +12,8 @@
  */
 import supabaseAdmin from '../lib/supabase.js';
 import { verifyUser, verifyAdmin } from '../lib/auth.js';
-import { approveDepositCore, rejectDepositCore, approveWithdrawalCore, rejectWithdrawalCore } from './admin.js';
+import { approveDepositCore, rejectDepositCore, approveWithdrawalCore, rejectWithdrawalCore, createGiftCodeCore, generateRandomGiftCode } from './admin.js';
+import { purgeOldWithdrawalProofsCore } from './finance.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const ADMIN_CHAT_IDS = (process.env.TELEGRAM_ADMIN_CHAT_IDS || '').split(',').map(s => s.trim());
@@ -93,6 +94,7 @@ async function telegramWebhook(req, res) {
         case '/withdrawals': return await handleWithdrawals(chatId, res);
         case '/broadcast': return await handleBroadcast(chatId, text, res);
         case '/purgeproofs': return await handlePurgeProofs(chatId, res);
+        case '/giftcode': return await handleGiftCode(chatId, text, res);
         case '/help': return await handleHelp(chatId, res);
         default:
           await sendToTelegram(chatId, 'Unknown command. Use /help');
@@ -286,23 +288,34 @@ async function handleBroadcast(chatId, text, res) {
 }
 
 async function handlePurgeProofs(chatId, res) {
-  try {
-    // Same endpoint Vercel's cron would have hit — using CRON_SECRET as
-    // the auth, not a JWT, since this call originates from inside
-    // another serverless function, not a logged-in browser session.
-    const baseUrl = process.env.APP_URL || `https://${process.env.VERCEL_URL}`;
-    const purgeRes = await fetch(`${baseUrl}/api/finance?action=purgeOldWithdrawalProofs`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` }
-    });
-    const data = await purgeRes.json();
-    if (!purgeRes.ok) {
-      await sendToTelegram(chatId, `⚠️ Purge failed: ${data.error || 'Unknown error'}`);
-    } else {
-      await sendToTelegram(chatId, `🗑️ ${data.message} (${data.deletedCount} removed)`);
-    }
-  } catch (err) {
-    await sendToTelegram(chatId, `⚠️ Purge failed: ${err.message}`);
+  const result = await purgeOldWithdrawalProofsCore();
+  if (!result.ok) {
+    await sendToTelegram(chatId, `⚠️ Purge failed: ${result.error}`);
+  } else {
+    await sendToTelegram(chatId, `🗑️ ${result.message} (${result.deletedCount} removed)`);
+  }
+  res.status(200).end();
+}
+
+async function handleGiftCode(chatId, text, res) {
+  // /giftcode <amount> [max_uses] [custom_code]
+  const parts = text.split(' ').slice(1);
+  const amount = Number(parts[0]);
+  const maxUses = parts[1] ? Number(parts[1]) : 1;
+  const customCode = parts[2];
+
+  if (!amount || amount <= 0) {
+    await sendToTelegram(chatId, 'Usage: /giftcode &lt;amount&gt; [max_uses] [custom_code]\ne.g. /giftcode 5000  or  /giftcode 5000 10 WELCOME2026');
+    return res.status(200).end();
+  }
+
+  const code = customCode || generateRandomGiftCode();
+  const result = await createGiftCodeCore(code, amount, maxUses);
+
+  if (!result.ok) {
+    await sendToTelegram(chatId, `⚠️ Failed to create gift code: ${result.error}`);
+  } else {
+    await sendToTelegram(chatId, `🎁 <b>Gift Code Created</b>\nCode: <code>${result.record.code}</code>\nAmount: ₦${result.record.amount.toLocaleString()}\nMax uses: ${result.record.max_uses}`);
   }
   res.status(200).end();
 }
@@ -316,7 +329,9 @@ async function handleHelp(chatId, res) {
 /withdrawals - Pending withdrawals (with Approve/Reject buttons)
 /broadcast &lt;msg&gt; - Send message to all users
 /purgeproofs - Manually delete yesterday's-and-older withdrawal proof screenshots
+/giftcode &lt;amount&gt; [max_uses] [code] - Create a gift code (auto-generates code if omitted)
 /help - Show this help`;
   await sendToTelegram(chatId, msg);
   res.status(200).end();
-}
+  }
+        
