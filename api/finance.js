@@ -147,6 +147,9 @@ async function createDeposit(req, res) {
   if (!amount || Number(amount) <= 0) {
     return res.status(400).json({ error: 'Please enter a valid deposit amount' });
   }
+  if (Number(amount) < 5000) {
+    return res.status(400).json({ error: 'Minimum deposit is ₦5,000' });
+  }
 
   // 1. Create Deposit Record
   const { data: deposit, error: depErr } = await supabaseAdmin
