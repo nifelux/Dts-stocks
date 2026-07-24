@@ -19,6 +19,7 @@
       <p class="text-muted" style="margin-bottom:0;">Send money from your wallet to your bank account.</p>
     </div>
 
+    <div id="hours-banner-wrap" class="mb-2"></div>
     <div id="kyc-banner-wrap" class="mb-2"></div>
 
     <!-- Balance summary -->
@@ -40,8 +41,8 @@
           <span class="balance-sub-value">Bank transfer</span>
         </div>
         <div class="balance-sub">
-          <span class="balance-sub-label">Typical payout time</span>
-          <span class="balance-sub-value">Within 24 hrs</span>
+          <span class="balance-sub-label">Withdrawal hours</span>
+          <span class="balance-sub-value">Mon–Sat, 10am–5pm</span>
         </div>
       </div>
     </div>
@@ -237,6 +238,15 @@
     }
 
     // ---------- Balance + KYC gate ----------
+    // Mirrors the server-side check in finance.js — client-side is just
+    // for a clear message; the server is the real authority.
+    function isWithdrawalWindowOpen() {
+      const now = new Date();
+      const watHour = (now.getUTCHours() + 1) % 24;
+      const watDay = new Date(now.getTime() + 60 * 60 * 1000).getUTCDay();
+      return watDay >= 1 && watDay <= 6 && watHour >= 10 && watHour < 17;
+    }
+
     async function loadBalanceAndGate(user) {
       const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single();
       const { data: pendingRows } = await supabase.from('withdrawals').select('amount').eq('user_id', user.id).eq('status', 'pending');
@@ -245,6 +255,15 @@
       currentBalance = (wallet?.balance || 0) - pendingTotal;
       document.getElementById('available-balance').textContent = currentBalance.toLocaleString();
       document.getElementById('balance-card').style.display = 'block';
+
+      if (!isWithdrawalWindowOpen()) {
+        document.getElementById('hours-banner-wrap').innerHTML = `
+          <div class="alert alert-info kyc-banner">
+            <span>Withdrawals are only available Monday–Saturday, 10am–5pm. Please come back during those hours.</span>
+          </div>`;
+        document.getElementById('withdraw-form').style.display = 'none';
+        return;
+      }
 
       const { data: profile } = await supabase.from('profiles').select('kyc_status').eq('id', user.id).single();
       const wrap = document.getElementById('kyc-banner-wrap');
