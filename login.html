@@ -72,8 +72,23 @@
         btn.textContent = 'Login';
         return;
       }
-      // Check if admin
-      const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', data.user.id).single();
+      // Check admin status AND ban status — Supabase Auth has no concept
+      // of our app's is_banned column, so a banned user authenticates
+      // successfully every time; this is the only place that actually
+      // enforces it at login.
+      const { data: profile } = await supabase.from('profiles').select('is_admin, is_banned, ban_reason').eq('id', data.user.id).single();
+
+      if (profile?.is_banned) {
+        await supabase.auth.signOut();
+        errorDiv.textContent = profile.ban_reason
+          ? `Your account has been banned: ${profile.ban_reason}`
+          : 'Your account has been banned. Contact support if you believe this is a mistake.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Login';
+        return;
+      }
+
       if (profile?.is_admin) {
         window.location.href = '/admin/index.html';
       } else {
@@ -89,6 +104,16 @@
         window.location.href = '/dashboard.html';
         return;
       }
+
+      // Shown when components.js force-logs-out an already-banned user
+      // mid-session (see the ?banned=1 redirect there).
+      const params = new URLSearchParams(location.search);
+      if (params.get('banned') === '1') {
+        const errorDiv = document.getElementById('error-alert');
+        errorDiv.textContent = `Your account has been banned${decodeURIComponent(params.get('reason') || '.')}`;
+        errorDiv.style.display = 'block';
+      }
+
       document.getElementById('page-content').style.visibility = 'visible';
     })();
   </script>
