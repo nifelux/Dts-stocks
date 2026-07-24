@@ -152,11 +152,6 @@ async function invest(productId, amount) {
 }
 
 // ---------------- WELFARE ----------------
-async function hasActiveInvestment(userId) {
-  const { count } = await supabase.from('investments').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'active');
-  return (count || 0) > 0;
-}
-
 function welfareBuilderHTML() {
   return `
     <div class="card welfare-builder">
@@ -234,24 +229,7 @@ async function createWelfare() {
 }
 
 async function loadWelfareGate() {
-  const user = (await supabase.auth.getUser()).data.user;
   const gate = document.getElementById('welfare-gate');
-  const unlocked = await hasActiveInvestment(user.id);
-
-  if (!unlocked) {
-    gate.innerHTML = `
-      <div class="welfare-locked">
-        <span class="welfare-locked-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </span>
-        <div>
-          <h4>Requires an active investment</h4>
-          <p class="text-muted">Welfare plans are only available once you have at least one active investment from the Investment tab.</p>
-        </div>
-      </div>`;
-    return;
-  }
-
   gate.innerHTML = welfareBuilderHTML();
   document.getElementById('welfare-amount').addEventListener('input', updateWelfarePreview);
   document.getElementById('welfare-days').addEventListener('input', updateWelfarePreview);
