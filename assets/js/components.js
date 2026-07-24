@@ -227,9 +227,20 @@ async function renderNavFor(user) {
   if (user && supabase) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, is_admin')
+      .select('full_name, is_admin, is_banned, ban_reason')
       .eq('id', user.id)
       .single();
+
+    // Safety net for someone already logged in when they get banned —
+    // login.html only catches it at sign-in time, this catches it on
+    // every subsequent page load until the session is forcibly ended.
+    if (profile?.is_banned) {
+      await supabase.auth.signOut();
+      const reason = profile.ban_reason ? `: ${profile.ban_reason}` : '.';
+      window.location.href = `/login.html?banned=1&reason=${encodeURIComponent(reason)}`;
+      return;
+    }
+
     const displayName = profile?.full_name || user.email;
     const adminLink = profile?.is_admin ? '<a href="/admin" class="nav-link">Admin</a>' : '';
 
