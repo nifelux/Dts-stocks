@@ -39,6 +39,11 @@
 
   <div class="card mt-3">
     <h3 class="mb-2">Your Referrals</h3>
+    <div class="segment-tabs" id="referral-filter-tabs">
+      <button class="segment-tab is-active" data-filter="all">All</button>
+      <button class="segment-tab" data-filter="active">Active</button>
+      <button class="segment-tab" data-filter="inactive">Inactive</button>
+    </div>
     <div id="direct-referrals">Loading…</div>
   </div>
 
@@ -87,20 +92,60 @@ async function loadReferral() {
     alert('Referral code copied!');
   });
 
-  const { data: direct } = await supabase.from('profiles').select('full_name, email, created_at').eq('referred_by', user.id);
-  document.getElementById('total-team').textContent = direct?.length || 0;
-  document.getElementById('active-team').textContent = direct?.length || 0;
+  const { data: direct } = await supabase.from('profiles').select('id, full_name, email, created_at').eq('referred_by', user.id);
+  const referralIds = (direct || []).map(d => d.id);
 
-  document.getElementById('direct-referrals').innerHTML = direct?.length
-    ? direct.map(d => `
+  // "Active" = has made at least one approved deposit — the only real
+  // signal of engagement available (no last-login tracking exists),
+  // and it's the same event that triggers the referral bonus itself.
+  let activeIds = new Set();
+  if (referralIds.length > 0) {
+    const { data: activeDeposits } = await supabase
+      .from('deposits')
+      .select('user_id')
+      .eq('status', 'approved')
+      .in('user_id', referralIds);
+    activeIds = new Set((activeDeposits || []).map(d => d.user_id));
+  }
+
+  document.getElementById('total-team').textContent = direct?.length || 0;
+  document.getElementById('active-team').textContent = activeIds.size;
+
+  function renderReferralList(filter) {
+    const filtered = (direct || []).filter(d => {
+      if (filter === 'active') return activeIds.has(d.id);
+      if (filter === 'inactive') return !activeIds.has(d.id);
+      return true;
+    });
+
+    document.getElementById('direct-referrals').innerHTML = filtered.length
+      ? filtered.map(d => {
+          const isActive = activeIds.has(d.id);
+          return `
         <div class="team-row">
           <span class="team-avatar">${initials(d.full_name || d.email)}</span>
           <div style="flex:1; min-width:0;">
             <div style="font-weight:600; font-size:0.9rem;">${d.full_name || d.email}</div>
             <div class="text-muted" style="font-size:0.78rem;">Joined ${new Date(d.created_at).toLocaleDateString()}</div>
           </div>
-        </div>`).join('')
-    : '<p class="text-muted">No referrals yet — share your link to start earning.</p>';
+          <span class="badge ${isActive ? 'badge-success' : ''}">${isActive ? 'Active' : 'Inactive'}</span>
+        </div>`;
+        }).join('')
+      : `<p class="text-muted">${
+          filter === 'all' ? 'No referrals yet — share your link to start earning.' :
+          filter === 'active' ? 'No active referrals yet — active means they\'ve made at least one deposit.' :
+          'No inactive referrals.'
+        }</p>`;
+  }
+
+  renderReferralList('all');
+  document.querySelectorAll('#referral-filter-tabs .segment-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#referral-filter-tabs .segment-tab').forEach(t => t.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      renderReferralList(tab.dataset.filter);
+    });
+  });
 
   const { data: rewards } = await supabase.from('referral_rewards').select('*').eq('referrer_id', user.id);
   const totalEarned = rewards?.reduce((sum, r) => sum + r.reward_amount, 0) || 0;
