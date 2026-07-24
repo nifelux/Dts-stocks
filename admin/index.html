@@ -287,6 +287,7 @@
             <button class="btn btn-sm btn-outline" data-freeze="${u.id}" data-frozen="${u.is_frozen}">${u.is_frozen ? 'Unfreeze' : 'Freeze'}</button>
             <button class="btn btn-sm btn-danger" data-ban="${u.id}" data-banned="${u.is_banned}">${u.is_banned ? 'Unban' : 'Ban'}</button>
             <button class="btn btn-sm btn-outline" data-creditdebit="${u.id}">C/D</button>
+            <button class="btn btn-sm btn-outline" data-team="${u.id}" data-team-name="${escapeHtml(u.full_name || u.email)}">Team</button>
           </td>
         </tr>
       `).join('');
@@ -305,6 +306,7 @@
       const freezeId = e.target.dataset.freeze;
       const banId = e.target.dataset.ban;
       const cdId = e.target.dataset.creditdebit;
+      const teamId = e.target.dataset.team;
 
       if (freezeId) {
         const action = e.target.dataset.frozen === 'true' ? 'unfreezeUser' : 'freezeUser';
@@ -315,6 +317,39 @@
         const action = e.target.dataset.banned === 'true' ? 'unbanUser' : 'banUser';
         await apiCall('admin', action, { method: 'POST', body: JSON.stringify({ user_id: banId }) });
         loadUsers(document.getElementById('user-search').value);
+      }
+      if (teamId) {
+        document.getElementById('modal-title').textContent = `${e.target.dataset.teamName}'s Team`;
+        document.getElementById('modal-body').innerHTML = '<p class="text-muted">Loading…</p>';
+        document.getElementById('action-modal').classList.add('active');
+        try {
+          const result = await apiCall('admin', `getUserTeam&user_id=${teamId}`);
+          const { team, total_team_deposits, team_size } = result;
+          if (!team || team.length === 0) {
+            document.getElementById('modal-body').innerHTML = '<p class="text-muted">This user hasn\'t referred anyone yet.</p>';
+          } else {
+            document.getElementById('modal-body').innerHTML = `
+              <p class="text-muted mb-2">${team_size} referred user${team_size === 1 ? '' : 's'} · ₦${total_team_deposits.toLocaleString()} total deposited by the team</p>
+              <table class="table">
+                <thead><tr><th>Name</th><th>Email</th><th>VIP</th><th>Deposited</th><th>Balance</th><th>Joined</th></tr></thead>
+                <tbody>
+                  ${team.map(m => `
+                    <tr>
+                      <td>${escapeHtml(m.full_name || 'N/A')}</td>
+                      <td>${escapeHtml(m.email)}</td>
+                      <td>${escapeHtml(m.vip_level || 'bronze')}</td>
+                      <td>₦${Number(m.wallets?.total_deposited || 0).toLocaleString()}</td>
+                      <td>₦${Number(m.wallets?.balance || 0).toLocaleString()}</td>
+                      <td>${new Date(m.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          }
+        } catch (err) {
+          document.getElementById('modal-body').innerHTML = `<p class="text-danger">Failed to load team: ${escapeHtml(err.message)}</p>`;
+        }
       }
       if (cdId) {
         document.getElementById('modal-title').textContent = 'Credit / Debit Wallet';
