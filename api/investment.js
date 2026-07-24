@@ -193,17 +193,6 @@ async function createWelfareInvestment(req, res) {
     return res.status(400).json({ error: `Duration must be between ${WELFARE_MIN_DAYS} and ${WELFARE_MAX_DAYS} days` });
   }
 
-  // Gate: Welfare can only be purchased alongside an active (normal)
-  // investment.
-  const { count: activeCount } = await supabaseAdmin
-    .from('investments')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('status', 'active');
-  if (!activeCount) {
-    return res.status(400).json({ error: 'You need an active investment before you can start a Welfare plan.' });
-  }
-
   // Wallet balance check
   const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', user.id).single();
   if (!wallet || Number(wallet.balance) < Number(amount)) {
